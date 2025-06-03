@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockSight - Futuristic Stock Prediction</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">StockSight</div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Predictions</a>
+      <a href="#">Dashboard</a>
+      <a href="#">About</a>
+      <a href="#">Login</a>
+    </nav>
+  </header>
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Predict Tomorrow. Today.</h1>
+      <div class="cta-buttons">
+        <button class="primary">Try Prediction</button>
+        <button class="secondary">Learn More</button>
+      </div>
+    </div>
+  </section>
+  <section class="prediction">
+    <div class="input-panel glass">
+      <input type="text" placeholder="Search stock..." />
+      <select>
+        <option>Short term</option>
+        <option>ML-based forecast</option>
+      </select>
+    </div>
+    <div class="chart glass">
+      <canvas id="chart"></canvas>
+    </div>
+  </section>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
