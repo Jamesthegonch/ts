@@ -1041,33 +1041,36 @@ function fitToScreen(){
   if(!nodes.length) return;
 
   requestAnimationFrame(()=>{
-    const PAD = 40;
+    document.fonts.ready.then(()=>{
+      const PAD = 40;
 
-    const els = document.querySelectorAll('#mindmap .node');
-    if(!els.length) return;
+      const els = document.querySelectorAll('#mindmap .node');
+      if(!els.length) return;
 
-    let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
-    els.forEach(el => {
-      const r = el.getBoundingClientRect();
-      const p1 = worldFromScreen(r.left,  r.top);
-      const p2 = worldFromScreen(r.right, r.bottom);
-      left   = Math.min(left,   p1.wx);
-      right  = Math.max(right,  p2.wx);
-      top    = Math.min(top,    p1.wy);
-      bottom = Math.max(bottom, p2.wy);
+      let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+      els.forEach((el,i)=>{
+        const r = el.getBoundingClientRect();
+        const w = r.width, h = r.height;
+        const n = nodes[i];
+        if(!n) return;
+        minX = Math.min(minX, n.x - w/2);
+        maxX = Math.max(maxX, n.x + w/2);
+        minY = Math.min(minY, n.y - h/2);
+        maxY = Math.max(maxY, n.y + h/2);
+      });
+
+      const mapW = maxX - minX + PAD * 2;
+      const mapH = maxY - minY + PAD * 2;
+
+      const sw = window.innerWidth;
+      const sh = window.innerHeight;
+      const scale = Math.min(1, sw / mapW, sh / mapH);
+
+      view.scale = scale;
+      view.x = (sw - mapW * scale) / 2 - minX * scale + PAD * scale;
+      view.y = (sh - mapH * scale) / 2 - minY * scale + PAD * scale;
+      applyView();
     });
-
-    const mapW = right - left + PAD * 2;
-    const mapH = bottom - top + PAD * 2;
-
-    const sw = window.innerWidth;
-    const sh = window.innerHeight;
-    const scale = Math.min(1, sw / mapW, sh / mapH);
-
-    view.scale = scale;
-    view.x = (sw - mapW * scale) / 2 - left * scale + PAD * scale;
-    view.y = (sh - mapH * scale) / 2 - top  * scale + PAD * scale;
-    applyView();
   });
 }
 
