@@ -1039,17 +1039,39 @@ function openPopup(n) {
 // FIT TO SCREEN ON LOAD
 function fitToScreen(){
   if(!nodes.length) return;
-  const xs=nodes.map(n=>n.x), ys=nodes.map(n=>n.y);
-  const minX=Math.min(...xs), maxX=Math.max(...xs);
-  const minY=Math.min(...ys), maxY=Math.max(...ys);
-  const pad=40;
-  const mapW=(maxX-minX)+pad*2, mapH=(maxY-minY)+pad*2;
-  const sw=window.innerWidth, sh=window.innerHeight;
-  const scale=Math.min(sw/mapW, sh/mapH, 1);
-  view.scale=scale;
-  view.x = -minX*scale + (sw - (maxX-minX)*scale)/2;
-  view.y = -minY*scale + (sh - (maxY-minY)*scale)/2;
-  applyView();
+
+  requestAnimationFrame(()=>{
+    document.fonts.ready.then(()=>{
+      const PAD = 40;
+
+      const els = document.querySelectorAll('#mindmap .node');
+      if(!els.length) return;
+
+      let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+      els.forEach((el,i)=>{
+        const r = el.getBoundingClientRect();
+        const w = r.width, h = r.height;
+        const n = nodes[i];
+        if(!n) return;
+        minX = Math.min(minX, n.x - w/2);
+        maxX = Math.max(maxX, n.x + w/2);
+        minY = Math.min(minY, n.y - h/2);
+        maxY = Math.max(maxY, n.y + h/2);
+      });
+
+      const mapW = maxX - minX + PAD * 2;
+      const mapH = maxY - minY + PAD * 2;
+
+      const sw = window.innerWidth;
+      const sh = window.innerHeight;
+      const scale = Math.min(1, sw / mapW, sh / mapH);
+
+      view.scale = scale;
+      view.x = (sw - mapW * scale) / 2 - minX * scale + PAD * scale;
+      view.y = (sh - mapH * scale) / 2 - minY * scale + PAD * scale;
+      applyView();
+    });
+  });
 }
 
 // THEME & PANEL
