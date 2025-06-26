@@ -37,9 +37,10 @@
   #modeToggle svg { width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.3; }
 
   /* CANVAS */
-  #viewportContainer { position:absolute;inset:0; }
-  #viewport { position:absolute;inset:0;touch-action:none;cursor:grab; }
-  #viewport:active { cursor:grabbing; }
+#viewportContainer { position:absolute;inset:0;touch-action:none;cursor:grab; }
+#viewportContainer:active { cursor:grabbing; }
+#viewport { position:absolute;inset:0;touch-action:none;cursor:inherit; }
+#viewport:active { cursor:inherit; }
   svg#links { position:absolute;inset:0;overflow:visible;pointer-events:none; }
   #mindmap { position:absolute;inset:0;pointer-events:none; }
 
@@ -657,7 +658,7 @@ function applyView(){
 // PAN / ZOOM / DRAG
 let pan=false, startP={}, startV={};
 viewportContainer.addEventListener('pointerdown',e=>{
-  if(e.target!==viewport && e.target!==viewportContainer) return;
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup')) return;
   closeMenus();
   pan=true;
   viewportContainer.setPointerCapture(e.pointerId);
