@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en" spellcheck="false">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSL-Driven Radial Mind-Map – v9.6</title>
+<style>
+  :root {
+    --bg:#fff; --text:#1f1f1f;
+    --popup-bg:#f5f5f5; --menu-bg:#e6e6e6;
+    --node-border:#000; --overlay-blur:rgba(255,255,255,.6); --arrow:#000;
+    --pastels:#dbead8,#d8eafa,#f8e8e0,#e9e0f8,#f5edc8,#e9f6f6;
+    --hilites:#fff59d,#ffab91,#a5d6a7,#90caf9,transparent;
+    --fontcolors:#e53935,#1e88e5,#43a047,#fdd835,#8e24aa,#fb8c00;
+  }
+  .dark {
+    --bg:#1c1c1e; --text:#f2f2f7;
+    --popup-bg:#404040; --menu-bg:#2f2f2f;
+    --node-border:#f2f2f7; --overlay-blur:rgba(0,0,0,.6); --arrow:#f2f2f7;
+    --pastels:#374c36,#324861,#5a4a40,#433d6a,#5b5134,#295a5a;
+    --hilites:#6d6d00,#804d2d,#276639,#0d47a1,transparent;
+    --fontcolors:#ef5350,#42a5f5,#66bb6a,#ffeb3b,#ba68c8,#ffb74d;
+  }
+  .dark mark { color:#fff; }
+
+  html,body { margin:0;height:100%;background:var(--bg);color:var(--text);overflow:hidden;font-family:"Trebuchet MS",system-ui,sans-serif; }
+  button { cursor:pointer;background:transparent;color:var(--text);border:none;padding:0;font-size:.9rem; }
+
+  /* SIDE PANEL */
+  #sidepanel { position:fixed;left:0;top:0;bottom:0;width:280px;padding:.9rem;background:var(--menu-bg);border-right:3px solid var(--node-border);z-index:90;box-sizing:border-box;overflow:auto;transition:transform .25s; }
+  #sidepanel.collapsed { transform:translateX(-100%); }
+  #dslInput { width:100%;height:calc(100% - 3rem);resize:none;border:2px solid var(--node-border);border-radius:8px;background:var(--bg);color:var(--text);padding:.6rem;font-family:monospace;box-sizing:border-box; }
+  #sideToggle { position:absolute;top:8px;right:-28px;width:26px;height:26px;border-radius:50%;background:var(--menu-bg);border:3px solid var(--node-border);display:flex;align-items:center;justify-content:center;cursor:pointer; }
+
+  /* MODE TOGGLE */
+  #modeToggle { position:fixed;top:1rem;right:1rem;z-index:95;border:2px solid var(--text);border-radius:12px;padding:.35rem .6rem;display:flex;align-items:center;background:var(--bg); }
+  #modeToggle svg { width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.3; }
+
+  /* CANVAS */
+  #viewportContainer { position:absolute;inset:0; }
+  #viewport { position:absolute;inset:0;touch-action:none;cursor:grab; }
+  #viewport:active { cursor:grabbing; }
+  svg#links { position:absolute;inset:0;overflow:visible;pointer-events:none; }
+  #mindmap { position:absolute;inset:0;pointer-events:none; }
+
+  /* NODES */
+  .node { position:absolute;border:3px solid var(--node-border);color:var(--text);font-weight:600;pointer-events:auto;user-select:none;transition:transform .12s,box-shadow .2s;max-width:250px;text-align:center;background:var(--bg);box-shadow:0 4px 12px rgba(0,0,0,.12); }
+  .node:hover { transform:translate(-50%,-50%) scale(1.06);cursor:grab;box-shadow:0 6px 14px rgba(0,0,0,.18); }
+  .dragging { opacity:.85!important;cursor:grabbing!important; }
+
+  /* POPUP */
+  .overlay { position:fixed;inset:0;background:var(--overlay-blur);backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;z-index:60; }
+  .popup { background:var(--popup-bg);width:100vw;max-width:720px;max-height:85vh;padding:2rem;border:3px solid var(--node-border);border-radius:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:1rem;overflow:hidden; }
+  .popup header { display:flex;gap:.6rem;align-items:center; }
+  .popup h2 { margin:0;font-size:1.35rem;outline:none;flex:1; }
+  .iconBtn svg { width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.3; }
+
+  /* TOOLBAR */
+  .toolbar { display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem;align-items:center; }
+  .toolbar button,.toolbar select,.colorSwatch,.fontSwatch { border:2px solid var(--node-border);border-radius:8px;padding:4px 10px;background:var(--menu-bg); }
+  .toolbar select { border:none;background:var(--menu-bg);padding:4px 6px;border-radius:8px;cursor:pointer;font-size:.85rem; }
+  .colorSwatch { width:24px;height:24px;padding:0;cursor:pointer;display:inline-block; }
+  .fontSwatch { width:24px;height:24px;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-weight:700; }
+
+  /* NOTES & EXERCISE */
+  .noteArea { width:100%;min-height:160px;max-height:400px;padding:.6rem;margin:0 .6rem;font-size:1.3rem;line-height:1.2;background:transparent;color:var(--text);border:2px solid transparent;border-radius:8px;outline:none;resize:none;overflow-y:auto;flex:1; }
+  .noteArea p,.noteArea div { margin:0; }
+  .noteArea:focus-visible { outline:none; }
+  .noteArea:empty:before { content:"Start typing…";opacity:.4;font-style:italic;pointer-events:none; }
+
+  .exerciseBox { border:2px solid var(--node-border);border-radius:12px;padding:1rem;background:var(--menu-bg);caret-color:transparent;user-select:none; }
+  .exerciseBox * { caret-color:transparent;user-select:none; }
+  .exerciseBox .question { font-weight:600;border-left:4px solid var(--node-border);padding-left:.6rem;margin-bottom:.6rem; }
+  .exerciseCtrl { display:flex;gap:1.2rem;margin-bottom:.6rem; }
+  #stepBtn { background:#a5d6a7;border:2px solid var(--node-border);border-radius:8px;padding:6px 14px;font-weight:600; }
+  #fullBtn { background:#ffab91;border:2px solid var(--node-border);border-radius:8px;padding:6px 14px;font-weight:600; }
+  .exerciseStep { margin-left:1.1rem;line-height:1.4;list-style-type:decimal; }
+
+  /* CONTEXT MENU */
+  .context-menu { position:absolute;background:var(--menu-bg);border:2px solid var(--node-border);border-radius:8px;z-index:75;padding:.25rem 0;min-width:190px;box-shadow:0 3px 10px rgba(0,0,0,.15); }
+  .context-menu button { width:100%;display:flex;gap:8px;align-items:center;font-size:.9rem;padding:.45rem 1rem;background:transparent;border:none;color:var(--text);text-align:left; }
+  .context-menu button:hover { background:rgba(0,0,0,.05); }
+  .context-menu svg { width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.3; }
+</style>
+</head>
+<body>
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  REVERSE-FAMILY TREE – edge-gap guarantee (v17)          ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+     <script>
+      (function tidyTreeEdgeGap () {
+      
+      /* ── CONFIG KNOBS ─────────────────────────────────────────── */
+      const TOP_PAD    = 60;      // root’s top edge from viewport
+      const ROW_GAP    = 300;     // vertical gap between generations
+      const EDGE_GAP   = 200;      // 🔸 minimum empty space (edge-to-edge)
+      const MAX_FRAC   = 5;    // max allowed width fraction
+      
+      /* ── WAIT FOR HOST MAP ────────────────────────────────────── */
+      (function wait () {
+        try { if (typeof build === 'function' && Array.isArray(nodes)) return patch(); }
+        catch { /* script not loaded yet */ }
+        setTimeout(wait, 0);
+      })();
+      
+      /* ── MAIN PATCH ───────────────────────────────────────────── */
+      function patch () {
+        if (build._edgeGapV17) return;      // already applied
+      
+        /* 1 ▸ root + orphans */
+        const root = nodes.find(n => /^syllabus\b/i.test(n.label)) || nodes[0];
+        nodes.forEach(n => { if (n !== root && n.parent == null) n.parent = root.id; });
+      
+        /* 2 ▸ children lookup */
+        const kids = {};
+        nodes.forEach(n => { if (n.parent != null) (kids[n.parent] ||= []).push(n); });
+      
+        /* 3 ▸ measure real box sizes */
+        function measure () {
+          const probe = document.createElement('div');
+          probe.style.cssText = 'position:absolute;visibility:hidden;';
+          document.body.appendChild(probe);
+          nodes.forEach(n => {
+            probe.className = 'node';
+            probe.innerHTML = `<div>${n.label}</div>`;
+            const r = probe.getBoundingClientRect();
+            n._w = r.width; n._h = r.height;
+          });
+          document.body.removeChild(probe);
+        }
+      
+        /* 4 ▸ compute subtree widths (edge-gap aware) */
+        const subW = new Map();
+        function width(n) {
+          const ch = kids[n.id] || [];
+          if (!ch.length) return subW.set(n, n._w).get(n);
+          const totalKids = ch.reduce((sum,c)=> sum + width(c), 0);
+          const gaps      = EDGE_GAP * (ch.length - 1);
+          return subW.set(n, Math.max(n._w, totalKids + gaps)).get(n);
+        }
+      
+        /* 5 ▸ place nodes (strict L→R) */
+        function place(n, leftEdge, depth) {
+          n.y = TOP_PAD + depth * ROW_GAP;
+          n.x = leftEdge + subW.get(n) / 2;
+      
+          const ch = kids[n.id] || [];
+          if (!ch.length) return;
+      
+          let cursor = leftEdge;
+          ch.forEach(c => {
+            place(c, cursor, depth + 1);
+            cursor += subW.get(c) + EDGE_GAP;
+          });
+        }
+      
+        /* 6 ▸ squeeze if too wide, then centre */
+        function fitAndCenter () {
+          let minX = Math.min(...nodes.map(n => n.x - n._w/2));
+          let maxX = Math.max(...nodes.map(n => n.x + n._w/2));
+          let W    = maxX - minX;
+      
+          if (W > innerWidth * MAX_FRAC) {
+            const f  = (innerWidth * MAX_FRAC) / W;
+            const cx = (minX + maxX) / 2;
+            nodes.forEach(n => n.x = (n.x - cx) * f + cx);
+            minX = Math.min(...nodes.map(n => n.x - n._w/2));
+            maxX = Math.max(...nodes.map(n => n.x + n._w/2));
+            W    = maxX - minX;
+          }
+          const offset = (innerWidth - W)/2 - minX;
+          nodes.forEach(n => n.x += offset);
+        }
+      
+        /* 7 ▸ apply positions to DOM */
+        function pushDOM () {
+          document.querySelectorAll('#mindmap .node')
+            .forEach((el,i)=>{
+              const n = nodes[i];
+              el.style.left = `${n.x}px`;
+              el.style.top  = `${n.y + n._h/2}px`;
+            });
+        }
+      
+        /* 8 ▸ redraw smooth connectors */
+        updateLinks = function () {
+          linkEls.forEach(({l,node})=>{
+            const p = nodes.find(k=>k.id===node.parent);
+            if (!p) { l.setAttribute('d', ''); return; }
+            const pB = p.y + p._h;
+            const cT = node.y;
+            if (cT <= pB){ l.setAttribute('d',''); return; }
+            const midY = (pB + cT)/2;
+            l.removeAttribute('marker-end');
+            l.setAttribute('d',
+              `M ${p.x} ${pB} C ${p.x} ${midY} ${node.x} ${midY} ${node.x} ${cT}`);
+          });
+        };
+      
+        /* 9 ▸ viewport snap */
+        function snap () {
+          view.scale = 1;
+          const minX = Math.min(...nodes.map(n => n.x - n._w/2));
+          const maxX = Math.max(...nodes.map(n => n.x + n._w/2));
+          view.x = innerWidth/2 - (minX+maxX)/2;
+          view.y = 0;
+          applyView();
+        }
+      
+        /* 10 ▸ wrap host build() */
+        const hostBuild = build;
+        build = function () {
+          hostBuild.apply(this, arguments);
+          measure();            // sizes first
+          width(root);          // subtree widths
+          place(root, 0, 0);    // coordinates
+          fitAndCenter();       // squeeze & centre
+          pushDOM();            // move DOM nodes
+          updateLinks();        // bend links
+          snap();               // centre viewport
+        };
+        build._edgeGapV17 = true;
+      
+        /* first render */
+        try { build(); } catch {}
+      }
+      })();
+      </script>
+      
+  <div id="sidepanel" class="collapsed">
+    <div id="sideToggle">→</div>
+    <h3>Mind-Map DSL</h3>
+    <textarea id="dslInput" spellcheck="false">
+    Syllabus 🗂️ | size=1.6 | color=#4fc3f7 /* light-blue 💧 */ | notes=<strong>Course overview: Numerical Methods for Differential Equations</strong>
+      Approximation & Interpolation 🎯 | size=1.3 | color=#ffe0b2 /* pastel-peach 🍑 */ | notes=<strong>Finding simple functions that mimic complex ones: interpolation fits exactly through given points (Lagrange, Chebyshev, splines), approximation fits “as close as possible” (least-squares, regression, NURBS). Used for data fitting, graphics, and simulations. Key ideas: avoid overfitting (Runge’s phenomenon), prefer Chebyshev nodes for stability, and use splines for smoothness. Example: interpolation hits all data points, approximation finds best fit for noisy data.</strong>
+        Interpolation 📍 | size=1.0 | color=#ffd54f /* sunflower 🌻 */  
+          Vandermonde Matrix | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          Lagrange Formula | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          Error Analysis & Runge Phenomenon | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          Chebyshev Nodes | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          Cubic Splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+        Approximation 🎨 | size=1.0 | color=#ffd54f /* sunflower 🌻 */  
+          Polynomial Regression | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          Orthogonal Projection & Least Squares | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          NURBS & B-splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+      Numerical Integration 📏 | size=1.3 | color=#ffb74d /* amber-orange 🍊 */ | notes=<ul><li>Newton-Cotes</li><li>Gauss</li><li>Adaptive, Romberg</li></ul>
+        Newton-Cotes Closed | size=1.0 | color=#ffe082 /* brass ⭐ */  
+          Trapezoidal & Simpson | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          Composite Rules & Error Bounds | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+        Gauss-Legendre Quadrature | size=1.0 | color=#ffe082 /* brass ⭐ */  
+        Recursive & Adaptive Methods 🔄 | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          Richardson Extrapolation | size=0.6 | color=#e0f7fa /* mint 🌿 */  
+          Romberg Integration | size=0.6 | color=#e0f7fa /* mint 🌿 */  
+          Adaptive Subdivision | size=0.6 | color=#e0f7fa /* mint 🌿 */  
+      Numerical Differentiation 🔢 | size=1.3 | color=#a5d6a7 /* mint-green 🌱 */ | notes=<ul><li>Finite differences</li><li>Errors & stability</li></ul>
+        Finite Difference Formulas | size=1.0 | color=#c8e6c9 /* pale-green 🌾 */  
+          Forward & Backward (O(h²)) | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
+          Central (O(h²), O(h⁴)) | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
+        Round-off Error Analysis ⚠️ | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
+          Floating-point Arithmetic | size=0.6 | color=#f0f4c3 /* lemon 🍋 */  
+          Optimal Step-size Choice | size=0.6 | color=#f0f4c3 /* lemon 🍋 */  
+      Initial Value Problems 🌐 | size=1.3 | color=#ce93d8 /* lavender 🌸 */ | notes=<ul><li>One-step & multistep methods</li><li>Stability</li></ul>
+        Stability of ODEs | size=1.0 | color=#e1bee7 /* lilac 🌺 */  
+        Taylor & Euler Methods | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
+        Runge-Kutta Family | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
+        Multistep (Adams, Gear) | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
+      Nonlinear Equations 🔎 | size=1.3 | color=#90caf9 /* sky-blue ☁️ */ | notes=<ul><li>Bisection to Newton</li></ul>
+        Bisection & Fixed Point | size=1.0 | color=#bbdefb /* powder-blue 🌬 */  
+        Newton-Raphson & Secant | size=1.0 | color=#bbdefb /* powder-blue 🌬 */  
+        Systems & Nonlinear Optimization | size=0.8 | color=#e3f2fd /* silk 🌨 */  
+      Boundary Value Problems 🏁 | size=1.3 | color=#ffcc80 /* peach 🍑 */ | notes=<ul><li>Finite differences</li><li>Heat, wave, Poisson</li></ul>
+        Poisson via Finite Differences | size=1.0 | color=#ffe0b2 /* pastel-peach 🍑 */  
+        Heat Equation & Stability | size=0.8 | color=#fff3e0 /* cream 🍦 */  
+        Wave Equation & Dispersion | size=0.8 | color=#fff3e0 /* cream 🍦 */  
+      Fun, Frustrations & Tricks 🎉 | size=1.3 | color=#b0bec5 /* slate-gray 🪨 */ | notes=<em>Insights & best practices</em>
+        Numerical Challenges & Tips | size=1.0 | color=#cfd8dc /* mist 🌫 */  
+        Practical Software (MATLAB, Python) | size=0.8 | color=#cfd8dc /* mist 🌫 */  
+    
+    </textarea>
+<!-- ╔════════════════════════════════════════════════════╗
+     ║  AUTO-FIT ON FIRST LOAD  –  overrides prior code  ║
+     ╚════════════════════════════════════════════════════╝ -->
+     <script>
+      (function autoFitOnce () {
+        if (typeof build !== 'function' || !Array.isArray(nodes)) return;
+      
+        /* hook after the very first build() repaint */
+        const originalBuild = build;
+        let firstRun = true;
+      
+        build = function patchedBuild () {
+          originalBuild.apply(this, arguments);
+      
+          if (!firstRun) return;
+          firstRun = false;
+      
+          /* 40 px margin */
+          const PAD = 40;
+      
+          /* compute bounding box of every node */
+          const left   = Math.min(...nodes.map(n => n.x - n._w / 2));
+          const right  = Math.max(...nodes.map(n => n.x + n._w / 2));
+          const top    = Math.min(...nodes.map(n => n.y));
+          const bottom = Math.max(...nodes.map(n => n.y + n._h));
+      
+          const mapW = right - left + PAD * 2;
+          const mapH = bottom - top + PAD * 2;
+      
+          /* scale so that map fits viewport, but never zoom in beyond 1× */
+          const scale = Math.min(
+            1,
+            innerWidth  / mapW,
+            innerHeight / mapH
+          );
+      
+          view.scale = scale;
+      
+          /* centre map inside viewport */
+          view.x = (innerWidth  - mapW * scale) / 2 - left * scale + PAD * scale;
+          view.y = (innerHeight - mapH * scale) / 2 - top  * scale + PAD * scale;
+      
+          applyView();         // redraw viewport transform once
+        };
+      })();
+      </script>
+      
+  </div>
+  <div id="viewportContainer">
+    <button id="modeToggle"></button>
+    <div id="viewport">
+      <svg id="links"></svg>
+      <div id="mindmap"></div>
+    </div>
+  </div>
+<script>
+// ICONS
+const ICONS = {
+  sun:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><g><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></g></svg>`,
+  moon:`<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  minus:`<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`,
+  check:`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`
+};
+
+// GLOBALS
+const viewport = document.getElementById('viewport'),
+      svg      = document.getElementById('links'),
+      mapRoot  = document.getElementById('mindmap'),
+      sidePanel= document.getElementById('sidepanel'),
+      dslInput = document.getElementById('dslInput'),
+      sideToggle = document.getElementById('sideToggle');
+let view={x:0,y:0,scale:1},nodes=[],linkEls=[],renderPending=false;
+
+// UTILITIES
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const blob=()=>`${rand(25,70)}% ${rand(30,70)}% ${rand(30,70)}% ${rand(25,70)}% / ${rand(30,70)}% ${rand(25,70)}% ${rand(25,70)}% ${rand(30,70)}%`;
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');const v=parseInt(h,16);return{r:(v>>16)&255,g:(v>>8)&255,b:v&255};}
+function rgbToHex(r,g,b){return"#"+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function adjustForDark(c){if(!/^#/.test(c))return c;const {r,g,b}=hexToRgb(c),lum=(.299*r+.587*g+.114*b)/255;return lum<.45?c:rgbToHex(r*.55|0,g*.55|0,b*.55|0);}
+const md = t => t
+  // bold / italic (unchanged)
+  .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+  .replace(/\*(.*?)\*/g,'<em>$1</em>')
+  // ==highlight==
+  .replace(/==(.*?)==/g,'<mark>$1</mark>')
+  // [[bg:#hex]] … [[/bg]]
+  .replace(/\[\[bg:([#\da-fA-F]{3,6})\]\]([\s\S]*?)\[\[\/bg\]\]/g,
+           '<mark style="background:$1;color:var(--text)">$2</mark>')
+  // [[size:123]] … [[/size]]
+  .replace(/\[\[size:(\d{2,3})\]\]([\s\S]*?)\[\[\/size\]\]/g,
+           '<span style="font-size:$1%;">$2</span>');
+
+function scheduleRender(){if(!renderPending){renderPending=true;requestAnimationFrame(()=>{renderPending=false;applyView();});}}
+function worldFromScreen(x,y){return{wx:(x-view.x)/view.scale,wy:(y-view.y)/view.scale};}
+const cssArr=prop=>getComputedStyle(document.documentElement).getPropertyValue(prop).split(',').map(s=>s.trim());
+const isDark = ()=>document.documentElement.classList.contains('dark');
+const closeMenus = ()=>document.querySelectorAll('.context-menu').forEach(m=>m.remove());
+
+// PARSE DSL
+function parseDSL(txt){
+  const lines=txt.split(/\n/).filter(l=>l.trim()&&!l.trim().startsWith('#')),
+        tree=[],stack=[];
+  lines.forEach(l=>{
+    const depth=l.match(/^\s*/)[0].length/2,
+          seg=l.trim().split('|').map(s=>s.trim()),
+          n={id:tree.length,label:seg[0],depth,parent:depth?stack[depth-1]:null,x:null,y:null,progress:0,notes:""};
+    seg.slice(1).forEach(p=>{
+      const [k,...r]=p.split('='),v=r.join('=');
+      if(k==='color')      n.color=v;
+      else if(k==='size')  n.scale=parseFloat(v);
+      else if(k==='question') n.question=v;
+      else if(k==='steps') n.steps=v.split(/;|>/).map(x=>x.trim()).filter(Boolean);
+      else if(k==='solution') n.solution=v;
+      else if(k==='notes') n.notes=v;
+    });
+    tree.push(n); stack[depth]=n.id;
+  });
+  return tree;
+}
+
+function build(){
+  svg.innerHTML = '';
+  mapRoot.innerHTML = '';
+
+  // 1) first pass: parse palette & center
+  const pal      = cssArr('--pastels'),
+        center   = { x: innerWidth/2 - view.x, y: innerHeight/2 - view.y };
+
+  // 2) count depth‐groups so we know angular spacing
+  const depthCnt = {}, depthIdx = {};
+  nodes.forEach(n => {
+    if (n.x == null) depthCnt[n.depth] = (depthCnt[n.depth]||0) + 1;
+  });
+
+  // 3) measure each node’s rendered diameter
+  //    create a hidden container, render each node once, measure, then tear down
+  const measContainer = document.createElement('div');
+  measContainer.style.cssText = 'position:absolute;visibility:hidden;top:0;left:0;';
+  document.body.appendChild(measContainer);
+
+  const depthSize = {}; // depth → max diameter
+  nodes.forEach(n => {
+    // compute the same scaleVisual you use in your real nodes
+    const baseScale    = {0:1.4,1:1.15}[n.depth] || 1,
+          scaleVisual  = baseScale * (n.scale||1),
+          paddingV     = 22 * scaleVisual,
+          paddingH     = 30 * scaleVisual,
+          fontSizeRem  = 1.25 * scaleVisual;
+
+    // make a temporary div
+    const d = document.createElement('div');
+    d.className = 'node';
+    d.style.cssText = `
+      padding: ${paddingV}px ${paddingH}px;
+      font-size: ${fontSizeRem}rem;
+      border-radius: ${blob()};
+    `;
+    d.innerHTML = `<div>${n.label}</div>`;
+    measContainer.appendChild(d);
+
+    // measure
+    const bb   = d.getBoundingClientRect(),
+          diam = Math.max(bb.width, bb.height);
+
+    depthSize[n.depth] = Math.max(depthSize[n.depth]||0, diam);
+
+    measContainer.removeChild(d);
+  });
+  document.body.removeChild(measContainer);
+
+  // 4) build optimized radii with better spacing and organize nodes by parent
+  const maxDepth = Math.max(...nodes.map(n=>n.depth));
+  const radii    = [0];
+  
+  // Compact radial spacing calculation
+  for(let d=1; d<=maxDepth; d++){
+    const prevDia = depthSize[d-1] || 0,
+          currDia = depthSize[d]   || 0,
+          compactSpacing = Math.max(30, currDia * 0.4);
+    radii[d] = radii[d-1] + prevDia/2 + currDia/2 + compactSpacing;
+  }
+
+  // 5) organize nodes by parent for better grouping
+  const nodesByParent = {};
+  nodes.forEach(n => {
+    const parentId = n.parent ?? 'root';
+    if (!nodesByParent[parentId]) nodesByParent[parentId] = [];
+    nodesByParent[parentId].push(n);
+  });
+
+  // 6) position nodes with improved spacing and grouping
+  nodes.forEach(n => {
+    if (n.x != null) return; // skip already positioned nodes
+    
+    if (n.depth === 0) {
+      // Root node at center
+      n.x = center.x;
+      n.y = center.y;
+    } else {
+      // Get siblings and parent info
+      const siblings = nodesByParent[n.parent] || [];
+      const siblingIndex = siblings.indexOf(n);
+      const siblingCount = siblings.length;
+      
+      // Calculate compact angular spacing
+      const avgNodeSize = depthSize[n.depth] || 60;
+      const minAngularSpacing = Math.max(25, (avgNodeSize * 1.2 / radii[n.depth]) * (180/Math.PI));
+      
+      // Find parent position for better grouping
+      const parent = nodes.find(p => p.id === n.parent);
+      let baseAngle = parent ? Math.atan2(parent.y - center.y, parent.x - center.x) * (180/Math.PI) : -90;
+      
+      // Distribute siblings more compactly around parent's direction
+      let angleOffset;
+      if (siblingCount === 1) {
+        angleOffset = 0;
+      } else {
+        const spanAngle = Math.min(120, minAngularSpacing * siblingCount); // Max 120 degrees span
+        angleOffset = (siblingIndex - (siblingCount-1)/2) * (spanAngle / Math.max(1, siblingCount-1));
+      }
+      
+      const finalAngle = baseAngle + angleOffset;
+      const angRad = finalAngle * Math.PI/180;
+      const r = radii[n.depth] * (n.scale || 1);
+
+      n.x = center.x + r * Math.cos(angRad);
+      n.y = center.y + r * Math.sin(angRad);
+    }
+  });
+
+  // 7) collision detection and resolution
+  const resolveCollisions = () => {
+    let hasCollisions = true;
+    let iterations = 0;
+    const maxIterations = 5;
+    
+    while (hasCollisions && iterations < maxIterations) {
+      hasCollisions = false;
+      iterations++;
+      
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const nodeA = nodes[i], nodeB = nodes[j];
+          if (nodeA.depth === 0 || nodeB.depth === 0) continue; // Don't move root
+          
+          const dx = nodeB.x - nodeA.x;
+          const dy = nodeB.y - nodeA.y;
+          const distance = Math.sqrt(dx*dx + dy*dy);
+          const minDistance = (depthSize[nodeA.depth] + depthSize[nodeB.depth]) / 2 + 8;
+          
+          if (distance < minDistance && distance > 0) {
+            hasCollisions = true;
+            const pushForce = (minDistance - distance) / 2;
+            const angle = Math.atan2(dy, dx);
+            
+            // Push nodes apart along their connection line
+            nodeA.x -= Math.cos(angle) * pushForce * 0.5;
+            nodeA.y -= Math.sin(angle) * pushForce * 0.5;
+            nodeB.x += Math.cos(angle) * pushForce * 0.5;
+            nodeB.y += Math.sin(angle) * pushForce * 0.5;
+            
+            // Maintain radial distance from center
+            const distA = Math.sqrt((nodeA.x-center.x)**2 + (nodeA.y-center.y)**2);
+            const distB = Math.sqrt((nodeB.x-center.x)**2 + (nodeB.y-center.y)**2);
+            const targetA = radii[nodeA.depth];
+            const targetB = radii[nodeB.depth];
+            
+            if (distA > 0) {
+              nodeA.x = center.x + (nodeA.x - center.x) * targetA / distA;
+              nodeA.y = center.y + (nodeA.y - center.y) * targetA / distA;
+            }
+            if (distB > 0) {
+              nodeB.x = center.x + (nodeB.x - center.x) * targetB / distB;
+              nodeB.y = center.y + (nodeB.y - center.y) * targetB / distB;
+            }
+          }
+        }
+      }
+    }
+  };
+  
+  resolveCollisions();
+
+  // 8) render all nodes with their computed positions
+  nodes.forEach(n => {
+    // give each node its blob background, size & position
+    if (!n.blob) n.blob = blob();
+    const baseScale   = {0:1.4,1:1.15}[n.depth] || 1,
+          scaleVisual = baseScale * (n.scale||1),
+          bgColor     = isDark()
+                        ? adjustForDark(n.customColor||n.color||pal[n.id%pal.length])
+                        : (n.customColor||n.color||pal[n.id%pal.length]),
+          dElem       = document.createElement('div');
+
+    dElem.className = 'node';
+    dElem.style.cssText = `
+      left: ${n.x}px;
+      top: ${n.y}px;
+      transform: translate(-50%,-50%);
+      background: ${bgColor};
+      border-radius: ${n.blob};
+      padding: ${22*scaleVisual}px ${30*scaleVisual}px;
+      font-size: ${1.25*scaleVisual}rem;
+    `;
+    dElem.innerHTML = `<div>${md(n.label)}</div>`;
+    mapRoot.appendChild(dElem);
+    enableNodeEvents(dElem, n);
+  });
+
+  // 6) redraw connectors
+  drawLinks();
+  applyView();
+}
+
+function drawLinks(){
+  svg.innerHTML='';
+  const defs=svg.appendChild(document.createElementNS('http://www.w3.org/2000/svg','defs')),
+        marker=document.createElementNS('http://www.w3.org/2000/svg','marker');
+  marker.id='arrowHead'; marker.setAttribute('markerWidth',8);
+  marker.setAttribute('markerHeight',8);
+  marker.setAttribute('refX',6);
+  marker.setAttribute('refY',3);
+  marker.setAttribute('orient','auto');
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d','M0,0 L0,6 L7,3 z');
+  path.setAttribute('fill','var(--arrow)');
+  marker.appendChild(path);
+  defs.appendChild(marker);
+  
+  // Create curved paths instead of straight lines for cleaner look
+  linkEls = nodes.filter(n=>n.parent!=null).map(n=>{
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('stroke','var(--arrow)');
+    path.setAttribute('stroke-width',2);
+    path.setAttribute('fill','none');
+    path.setAttribute('marker-end','url(#arrowHead)');
+    path.setAttribute('opacity','0.8');
+    svg.appendChild(path);
+    return {l:path,node:n};
+  });
+}
+function updateLinks(){
+  linkEls.forEach(({l,node})=>{
+    const p = nodes.find(x=>x.id===node.parent);
+    if(!p) return;
+    
+    // Calculate control points for smooth curved connections
+    const dx = node.x - p.x;
+    const dy = node.y - p.y;
+    const distance = Math.sqrt(dx*dx + dy*dy);
+    
+    // Create a subtle curve for compact connections
+    const curvature = Math.min(0.15, distance * 0.0005);
+    const midX = (p.x + node.x) / 2;
+    const midY = (p.y + node.y) / 2;
+    
+    // Offset control point perpendicular to the connection
+    const perpX = -dy * curvature;
+    const perpY = dx * curvature;
+    
+    const controlX = midX + perpX;
+    const controlY = midY + perpY;
+    
+    // Create smooth quadratic bezier curve
+    const pathData = `M ${p.x} ${p.y} Q ${controlX} ${controlY} ${node.x} ${node.y}`;
+    l.setAttribute('d', pathData);
+  });
+}
+function applyView(){
+  viewport.style.transform=`translate(${view.x}px,${view.y}px) scale(${view.scale})`;
+  viewport.style.transformOrigin='0 0';
+  updateLinks();
+}
+
+// PAN / ZOOM / DRAG
+let pan=false, startP={}, startV={};
+viewport.addEventListener('pointerdown',e=>{
+  if(e.target!==viewport) return;
+  closeMenus();
+  pan=true;
+  viewport.setPointerCapture(e.pointerId);
+  startP={x:e.clientX,y:e.clientY};
+  startV={...view};
+});
+viewport.addEventListener('pointermove',e=>{
+  if(!pan) return;
+  view.x = startV.x + (e.clientX - startP.x);
+  view.y = startV.y + (e.clientY - startP.y);
+  scheduleRender();
+});
+viewport.addEventListener('pointerup',()=>{ pan=false; });
+viewport.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f = e.deltaY>0 ? .97 : 1.03,
+        ns = Math.min(3,Math.max(.35,view.scale*f));
+  if(ns===view.scale) return;
+  const {wx,wy} = worldFromScreen(e.clientX,e.clientY);
+  view.scale=ns;
+  view.x=e.clientX-wx*view.scale;
+  view.y=e.clientY-wy*view.scale;
+  applyView();
+},{passive:false});
+
+// NODE EVENTS
+function enableNodeEvents(el,n){
+  const dragT=5; let dragging=false, sp, np;
+  el.addEventListener('pointerdown',e=>{
+    if(e.button) return;
+    e.stopPropagation();
+    sp={x:e.clientX,y:e.clientY};
+    np={x:n.x,y:n.y};
+    dragging=false;
+    el.classList.add('dragging');
+    const mv=e=>{
+      const dx=(e.clientX-sp.x)/view.scale,
+            dy=(e.clientY-sp.y)/view.scale;
+      if(!dragging && (dx*dx+dy*dy)>dragT*dragT) dragging=true;
+      if(dragging){
+        n.x=np.x+dx;
+        n.y=np.y+dy;
+        el.style.left=`${n.x}px`;
+        el.style.top=`${n.y}px`;
+        scheduleRender();
+      }
+    };
+    const up=_=>{
+      document.removeEventListener('pointermove',mv);
+      document.removeEventListener('pointerup',up);
+      el.classList.remove('dragging');
+      if(!dragging) openPopup(n);
+    };
+    document.addEventListener('pointermove',mv);
+    document.addEventListener('pointerup',up);
+  });
+  el.addEventListener('contextmenu',e=>{
+    e.preventDefault();
+    closeMenus();
+    showNodeMenu(e,n,el);
+  });
+}
+
+// CONTEXT MENUS
+viewport.addEventListener('contextmenu',e=>{
+  if(e.target!==viewport) return;
+  e.preventDefault();
+  closeMenus();
+  showBgMenu(e);
+});
+const promptLabel=d=>(prompt("Enter node label",d)||d||"Unnamed").trim();
+function showBgMenu(e){
+  const m=document.createElement('div'); m.className='context-menu';
+  m.style.left=`${e.clientX}px`; m.style.top=`${e.clientY}px`;
+  m.innerHTML=`<button id="add">${ICONS.plus} Add node</button>`;
+  document.body.appendChild(m);
+  m.querySelector('#add').onclick=_=>{
+    const id=nodes.length, {wx,wy}=worldFromScreen(e.clientX,e.clientY);
+    nodes.push({id,label:promptLabel(),depth:1,parent:0,x:wx,y:wy});
+    closeMenus(); build();
+  };
+  document.addEventListener('click',closeMenus,{once:true});
+}
+function showNodeMenu(e,n,el){
+  const m=document.createElement('div'); m.className='context-menu';
+  m.style.left=`${e.clientX}px`; m.style.top=`${e.clientY}px`;
+  m.innerHTML=`
+    <button id="bigger">${ICONS.plus} Bigger</button>
+    <button id="smaller">${ICONS.minus} Smaller</button>
+    <button id="color">🎨 Color</button>
+    <button id="child">${ICONS.plus} Add child</button>
+  `;
+  document.body.appendChild(m);
+  m.querySelector('#bigger').onclick=_=>{ n.scale=Math.min(2,(n.scale||1)*1.2); closeMenus(); build(); };
+  m.querySelector('#smaller').onclick=_=>{ n.scale=Math.max(.5,(n.scale||1)*.8); closeMenus(); build(); };
+  m.querySelector('#color').onclick=_=>{
+    saveSelection();
+    const picker=document.createElement('input');
+    picker.type='color';
+    picker.value=n.customColor||adjustForDark(n.color||getComputedStyle(el).backgroundColor);
+    picker.style.marginLeft='8px';
+    m.appendChild(picker);
+    picker.onchange=_=>{ n.customColor=picker.value; build(); };
+    picker.click();
+  };
+  m.querySelector('#child').onclick=_=>{
+    const id=nodes.length;
+    nodes.push({id,label:promptLabel("Child"),depth:n.depth+1,parent:n.id,x:n.x+rand(-50,50),y:n.y+rand(-50,50)});
+    closeMenus(); build();
+  };
+  document.addEventListener('click',closeMenus,{once:true});
+}
+
+// RICH TEXT HELPERS
+let savedRange=null;
+const saveSelection=_=>{ const s=getSelection(); if(s&&s.rangeCount) savedRange=s.getRangeAt(0).cloneRange(); };
+const restoreSelection=_=>{ const s=getSelection(); if(savedRange){ s.removeAllRanges(); s.addRange(savedRange);} };
+const wrap=(tag,style="")=>{
+  restoreSelection();
+  const s=getSelection(); if(!s.rangeCount) return;
+  const r=s.getRangeAt(0); if(r.collapsed) return;
+  const frag=r.extractContents(),
+        el=document.createElement(tag);
+  if(style) el.setAttribute('style',style);
+  el.appendChild(frag);
+  r.insertNode(el);
+  r.setStartAfter(el);
+  r.setEndAfter(el);
+  s.removeAllRanges();
+  s.addRange(r);
+};
+const execFontSize=delta=>{
+  restoreSelection();
+  const s=getSelection(); if(!s.rangeCount) return;
+  const r=s.getRangeAt(0),
+        span=document.createElement('span');
+  span.style.fontSize=delta>0?'larger':'smaller';
+  span.appendChild(r.extractContents());
+  r.insertNode(span);
+  r.setStartAfter(span);
+  r.setEndAfter(span);
+  s.removeAllRanges();
+  s.addRange(r);
+};
+const clearHighlight=_=>{ restoreSelection(); document.execCommand && document.execCommand('removeFormat',false,null); };
+
+// ── AI VIDEO DECISION ────────────────────────────────────────────
+function decidesIfVideoNeeded(node) {
+  const label = node.label.toLowerCase();
+  const notes = (node.notes || '').toLowerCase();
+  const content = label + ' ' + notes;
+  
+  // Video-worthy content indicators
+  const videoKeywords = [
+    'algorithm', 'process', 'procedure', 'method', 'technique',
+    'implementation', 'example', 'demonstration', 'tutorial',
+    'step', 'workflow', 'calculation', 'formula', 'equation',
+    'gradient descent', 'regression', 'classification', 'neural',
+    'matrix', 'vector', 'interpolation', 'integration', 'differentiation'
+  ];
+  
+  // Content that usually doesn't need videos
+  const noVideoKeywords = [
+    'definition', 'theory', 'concept', 'overview', 'introduction',
+    'summary', 'conclusion', 'reference', 'bibliography'
+  ];
+  
+  // Check for video-worthy content
+  const hasVideoKeywords = videoKeywords.some(keyword => content.includes(keyword));
+  const hasNoVideoKeywords = noVideoKeywords.some(keyword => content.includes(keyword));
+  
+  // Additional heuristics
+  const isLeafNode = !nodes.some(n => n.parent === node.id); // No children
+  const hasDetailedNotes = notes.length > 100; // Substantial content
+  const isMathematical = /[=+\-*\/\^()∫∂∑]/.test(content); // Contains math symbols
+  const isProcessBased = content.includes('step') || content.includes('phase') || content.includes('method');
+  
+  // Decision logic
+  if (hasNoVideoKeywords && !isMathematical) return false;
+  if (hasVideoKeywords || isMathematical || isProcessBased) return true;
+  if (isLeafNode && hasDetailedNotes) return true;
+  
+  // Default: no video for simple concept nodes
+  return false;
+}
+
+// ── POP-UP WINDOW ────────────────────────────────────────────────
+function openPopup(n) {
+  closeMenus();                        // close any context menu
+
+  /* ---------- overlay & basic skeleton ---------- */
+  const ov = document.createElement("div");
+  ov.className = "overlay";
+
+  const p = document.createElement("div");
+  p.className = "popup";
+  p.innerHTML = `
+    <header>
+      <h2 contenteditable="true" spellcheck="false">${md(n.label)}</h2>
+      <button class="iconBtn">${ICONS.check}</button>
+    </header>
+  `;
+
+  /* ---------- rich-text toolbar ---------- */
+  const hil = cssArr("--hilites"),
+        fcl = cssArr("--fontcolors");
+
+  const tb = document.createElement("div");
+  tb.className = "toolbar";
+  tb.innerHTML = `
+    <button id="bold"><strong>B</strong></button>
+    <button id="italic"><em>I</em></button>
+    <button id="hi">Highlight</button>
+    <button id="bullet">•</button>
+
+    ${hil
+      .map(
+        c =>
+          `<span class="colorSwatch" data-hclr="${c}" title="${
+            c === "transparent" ? "Remove highlight" : c
+          }" style="background:${c === "transparent"
+            ? "var(--menu-bg)"
+            : c}"></span>`
+      )
+      .join("")}
+
+    ${fcl
+      .map(
+        c =>
+          `<span class="fontSwatch" data-fclr="${c}" title="${c}" style="color:${c}">A</span>`
+      )
+      .join("")}
+
+    <select id="fSize">
+      <option value="-">A-</option>
+      <option value="+">A+</option>
+    </select>
+  `;
+  p.appendChild(tb);
+
+  /* ---------- editable note page ---------- */
+  const page = document.createElement("div");
+  page.className = "noteArea";
+  page.contentEditable = true;
+  page.spellcheck = false;
+
+  // 🡢 render stored notes through md() so the DSL markup shows up
+  page.innerHTML = md(n.notes || "");
+
+  // optional per-node colours (added in earlier step)
+  if (n.noteBg)    page.style.backgroundColor = n.noteBg;
+  if (n.noteColor) page.style.color           = n.noteColor;
+
+  /* ---------- (optional) exercise block ---------- */
+  if (n.question) {
+    if (!page.innerHTML) page.innerHTML = "<p><br></p>";
+
+    const ex = document.createElement("div");
+    ex.className = "exerciseBox";
+    ex.innerHTML = `
+      <div class="question">${md(n.question)}</div>
+      <div class="exerciseCtrl">
+        <button id="stepBtn">Next step</button>
+        <button id="fullBtn">Show all</button>
+      </div>
+      <ol class="exerciseStep"></ol>
+    `;
+    ex.contentEditable = false;
+    page.appendChild(ex);
+    page.insertAdjacentHTML("beforeend", "<p><br></p>");
+
+    const list    = ex.querySelector("ol"),
+          btnStep = ex.querySelector("#stepBtn"),
+          btnFull = ex.querySelector("#fullBtn");
+
+    const addStep = () => {
+      const li    = document.createElement("li");
+      li.innerHTML = md(n.steps[n.progress]);
+      list.appendChild(li);
+    };
+
+    btnStep.onclick = () => {
+      if (n.progress < n.steps.length) {
+        addStep();
+        n.progress++;
+        if (n.progress === n.steps.length) {
+          list.insertAdjacentHTML(
+            "beforeend",
+            `<li><strong>Answer:</strong> ${md(n.solution)}</li>`
+          );
+          btnStep.disabled = true;
+        }
+      }
+    };
+
+    btnFull.onclick = () => {
+      list.innerHTML = "";
+      n.steps.forEach(s =>
+        list.insertAdjacentHTML("beforeend", `<li>${md(s)}</li>`)
+      );
+      list.insertAdjacentHTML(
+        "beforeend",
+        `<li><strong>Answer:</strong> ${md(n.solution)}</li>`
+      );
+      n.progress     = n.steps.length;
+      btnStep.disabled = true;
+    };
+  }
+
+  p.appendChild(page);
+
+  /* ---------- footer (delete button) ---------- */
+  const footer = document.createElement("div");
+  footer.style.display = "flex";
+  footer.style.justifyContent = "space-between";
+  footer.innerHTML = `<button class="iconBtn">${ICONS.trash}</button>`;
+  p.appendChild(footer);
+
+  ov.appendChild(p);
+  document.body.appendChild(ov);
+
+  /* ---------- toolbar actions ---------- */
+  const acts = {
+    bold:   () => wrap("strong"),
+    italic: () => wrap("em"),
+    hi:     () => wrap("mark", `background-color:${hil[0]};color:var(--text);`),
+    bullet: () => { restoreSelection(); document.execCommand("insertUnorderedList"); }
+  };
+
+  tb.querySelector("#bold").onclick   = acts.bold;
+  tb.querySelector("#italic").onclick = acts.italic;
+  tb.querySelector("#hi").onmousedown = saveSelection;
+  tb.querySelector("#hi").onclick     = acts.hi;
+  tb.querySelector("#bullet").onmousedown = saveSelection;
+  tb.querySelector("#bullet").onclick     = acts.bullet;
+  tb.querySelector("#fSize").onmousedown  = saveSelection;
+  tb.querySelector("#fSize").onchange     = e =>
+    execFontSize(e.target.value === "+" ? 1 : -1);
+
+  tb.querySelectorAll(".colorSwatch").forEach(sw => {
+    sw.onmousedown = saveSelection;
+    sw.onclick = e => {
+      const c = e.target.dataset.hclr;
+      if (c === "transparent") { clearHighlight(); return; }
+      wrap("mark", `background-color:${c};color:var(--text);`);
+    };
+  });
+
+  tb.querySelectorAll(".fontSwatch").forEach(sw => {
+    sw.onmousedown = saveSelection;
+    sw.onclick = e =>
+      wrap("span", `color:${e.target.dataset.fclr};`);
+  });
+
+  /* ---------- save & close ---------- */
+  const titleEl = p.querySelector("h2");
+  const saveAndClose = () => {
+    titleEl.innerText.trim() && (n.label = titleEl.innerText.trim());
+    n.notes = page.innerHTML;  // save WITH the generated HTML
+    build();
+  };
+
+  p.querySelector(".iconBtn").onclick = () => { saveAndClose(); ov.remove(); };
+  ov.onclick = e => { if (e.target === ov) { saveAndClose(); ov.remove(); } };
+
+  /* ---------- delete node ---------- */
+  footer.querySelector(".iconBtn").onclick = () => {
+    if (!confirm("Delete node and its children?")) return;
+    const del = new Set();
+    (function dfs(id) {
+      del.add(id);
+      nodes.filter(x => x.parent === id).forEach(c => dfs(c.id));
+    })(n.id);
+    nodes = nodes.filter(x => !del.has(x.id));
+    ov.remove();
+    build();
+  };
+}
+
+// FIT TO SCREEN ON LOAD
+function fitToScreen(){
+  if(!nodes.length) return;
+  const xs=nodes.map(n=>n.x), ys=nodes.map(n=>n.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  const pad=40;
+  const mapW=(maxX-minX)+pad*2, mapH=(maxY-minY)+pad*2;
+  const sw=window.innerWidth, sh=window.innerHeight;
+  const scale=Math.min(sw/mapW, sh/mapH, 1);
+  view.scale=scale;
+  view.x = -minX*scale + (sw - (maxX-minX)*scale)/2;
+  view.y = -minY*scale + (sh - (maxY-minY)*scale)/2;
+  applyView();
+}
+
+// THEME & PANEL
+const modeBtn = document.getElementById('modeToggle');
+(function initMode(){
+  modeBtn.innerHTML = isDark() ? ICONS.sun : ICONS.moon;
+  modeBtn.onclick = ()=>{
+    document.documentElement.classList.toggle('dark');
+    modeBtn.innerHTML = isDark() ? ICONS.sun : ICONS.moon;
+    build();
+  };
+})();
+
+sideToggle.onclick = ()=>{
+  sidePanel.classList.toggle('collapsed');
+  sideToggle.textContent = sidePanel.classList.contains('collapsed')?'→':'←';
+  build();
+};
+
+// INIT
+function refresh(){
+  nodes = parseDSL(dslInput.value);
+  view={x:0,y:0,scale:1};
+  build();
+  fitToScreen();
+}
+
+dslInput.addEventListener('input',refresh);
+window.addEventListener('resize',()=>{ build(); fitToScreen(); });
+
+refresh();
+</script>
+<!-- ---------- Mind‑Map Extra Features (append before </body>) ---------- -->
+<style>
+  /* Video placeholder block - horizontal layout */
+  .videoBlock{
+    width:100%;
+    max-width:500px;
+    margin:0.5rem auto;
+    border:2px solid var(--node-border);
+    border-radius:8px;
+    background:#f0f0f0;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px;
+  }
+  .videoBlock .screen{
+    flex-shrink:0;
+    width:120px;
+    height:68px;
+    background:#bbb;
+    position:relative;
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .videoBlock .screen::after{
+    content:'▶';
+    font-size:1.2rem;
+    color:#fff;
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .videoBlock .content{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+  }
+  .videoBlock .title{
+    width:100%;
+    height:0.7rem;
+    background:#ccc;
+    border-radius:3px;
+  }
+  .videoBlock .desc{
+    width:85%;
+    height:0.5rem;
+    background:#ddd;
+    border-radius:3px;
+  }
+
+  /* Visualization placeholder */
+  .visBlock{
+    height:220px;
+    border:3px dashed var(--node-border);
+    border-radius:24px;
+    background:rgba(0,0,0,.05);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#777;
+    font-style:italic;
+    margin:1rem 0;
+  }
+
+  /* Microphone button in popup header */
+  .micBtn{
+    cursor:pointer;
+    background:transparent;
+    border:none;
+    margin-right:.6rem;
+  }
+  .micBtn svg{
+    width:22px;
+    height:22px;
+    stroke:currentColor;
+    fill:none;
+    stroke-width:2.3;
+  }
+  .micBtn.recording svg{
+    animation:pulse 1s infinite;
+  }
+  @keyframes pulse{
+    0%{transform:scale(1);} 
+    50%{transform:scale(1.25);} 
+    100%{transform:scale(1);} 
+  }
+
+  /* Floating selection toolbar */
+  .selectionToolbar{
+    position:absolute;
+    background:var(--menu-bg);
+    border:2px solid var(--node-border);
+    border-radius:8px;
+    display:flex;
+    gap:4px;
+    padding:4px;
+    cursor:pointer;
+    z-index:100;
+    box-shadow:0 3px 12px rgba(0,0,0,.25);
+  }
+  .selectionToolbar button{
+    padding:6px 8px;
+    border:1px solid var(--node-border);
+    border-radius:4px;
+    background:var(--bg);
+    color:var(--text);
+    cursor:pointer;
+    font-size:0.9rem;
+    min-width:28px;
+  }
+  .selectionToolbar button:hover{
+    background:var(--popup-bg);
+  }
+  .selectionToolbar .aiBtn{
+    background:#4fc3f7;
+    color:white;
+    border-color:#29b6f6;
+  }
+</style>
+
+<script>
+/* ---- Mind‑Map Extra Features ---- */
+(function(){
+  /* ---------- Helpers ---------- */
+  function insertNodeAtCaret(container, node){
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount){
+      const range = sel.getRangeAt(0);
+      range.collapse(false);
+      range.insertNode(node);
+      /* move caret after */
+      range.setStartAfter(node);
+      range.setEndAfter(node);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      container.appendChild(node);
+    }
+  }
+
+  /* ---------- Extend openPopup ---------- */
+  const _openPopup = openPopup;
+  openPopup = function(n){
+    _openPopup(n);                /* render original popup first */
+    const pop  = document.querySelector('.popup');
+    if(!pop) return;
+
+    /* ---------- microphone icon ---------- */
+    const header = pop.querySelector('header');
+    if(header && !header.querySelector('.micBtn')){
+      const mic = document.createElement('button');
+      mic.className = 'micBtn';
+      mic.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 013 3v8a3 3 0 11-6 0V4a3 3 0 013-3z"/><path d="M19 10a7 7 0 01-14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+      mic.onclick = ()=>{
+        mic.classList.toggle('recording');
+        if(mic.classList.contains('recording')){
+          mic.title = 'Stop voice chat';
+          alert('🎙️ Voice chat started!\n\nSpeak now to interact with AI about this content.\n\n(Note: This is a demo - actual voice recognition would be implemented here)');
+        } else {
+          mic.title = 'Start voice chat';
+          alert('🛑 Voice chat stopped.\n\nProcessing your voice input...\n\n(Note: This is a demo - AI response would appear here)');
+        }
+      };
+      header.insertBefore(mic, header.firstChild);
+    }
+
+    /* ---------- page reference ---------- */
+    const page    = pop.querySelector('.noteArea');
+    const toolbar = pop.querySelector('.toolbar');
+
+    if(page && toolbar){
+      /* AI-based video insertion - only for suitable content */
+      if(!page.querySelector('.videoBlock')){
+        const shouldHaveVideo = decidesIfVideoNeeded(n);
+        if(shouldHaveVideo){
+          const v = document.createElement('div');
+          v.className = 'videoBlock';
+          v.innerHTML = '<div class="screen"></div><div class="content"><div class="title"></div><div class="desc"></div></div>';
+          page.insertBefore(v, page.firstChild);
+        }
+      }
+
+      /* toolbar already has formatting buttons - no need for video/viz buttons */
+
+      /* ---------- floating formatting toolbar on selection ---------- */
+      let selToolbar = null;
+      const showSelectionToolbar = (rect)=>{
+        selToolbar = document.createElement('div');
+        selToolbar.className = 'selectionToolbar';
+        selToolbar.style.left = (rect.left + window.scrollX)+'px';
+        selToolbar.style.top  = (rect.top - 45 + window.scrollY) +'px';
+        selToolbar.innerHTML = `
+          <button onclick="document.execCommand('bold')" title="Bold"><strong>B</strong></button>
+          <button onclick="document.execCommand('italic')" title="Italic"><em>I</em></button>
+          <button onclick="document.execCommand('underline')" title="Underline"><u>U</u></button>
+          <button onclick="selToolbar.aiChat()" title="Ask AI" class="aiBtn">🤖</button>
+        `;
+        selToolbar.aiChat = ()=>{
+          const txt = window.getSelection().toString();
+          alert('🤖 AI Analysis of selected text:\n\n"'+txt+'"\n\nAI: This text discusses important concepts. Here are some insights...\n\n(Note: This is a demo - actual AI analysis would appear here)');
+          clearSelectionToolbar();
+        };
+        document.body.appendChild(selToolbar);
+      };
+      const clearSelectionToolbar = ()=>{
+        if(selToolbar){ selToolbar.remove(); selToolbar=null; }
+      };
+      page.addEventListener('mouseup', ()=>{
+        clearSelectionToolbar();
+        const s = window.getSelection();
+        if(s && !s.isCollapsed && page.contains(s.anchorNode)){
+          showSelectionToolbar(s.getRangeAt(0).getBoundingClientRect());
+        }
+      });
+      page.addEventListener('keyup', clearSelectionToolbar);
+      page.addEventListener('scroll', clearSelectionToolbar);
+    }
+  };
+})();
+</script>
+</body>
+</html>
