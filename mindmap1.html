@@ -1039,16 +1039,33 @@ function openPopup(n) {
 // FIT TO SCREEN ON LOAD
 function fitToScreen(){
   if(!nodes.length) return;
-  const xs=nodes.map(n=>n.x), ys=nodes.map(n=>n.y);
-  const minX=Math.min(...xs), maxX=Math.max(...xs);
-  const minY=Math.min(...ys), maxY=Math.max(...ys);
-  const pad=40;
-  const mapW=(maxX-minX)+pad*2, mapH=(maxY-minY)+pad*2;
-  const sw=window.innerWidth, sh=window.innerHeight;
-  const scale=Math.min(sw/mapW, sh/mapH, 1);
-  view.scale=scale;
-  view.x = -minX*scale + (sw - (maxX-minX)*scale)/2;
-  view.y = -minY*scale + (sh - (maxY-minY)*scale)/2;
+
+  const PAD = 40;
+
+  const els = document.querySelectorAll('#mindmap .node');
+  if(!els.length) return;
+
+  let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+  els.forEach(el => {
+    const r = el.getBoundingClientRect();
+    const p1 = worldFromScreen(r.left,  r.top);
+    const p2 = worldFromScreen(r.right, r.bottom);
+    left   = Math.min(left,   p1.wx);
+    right  = Math.max(right,  p2.wx);
+    top    = Math.min(top,    p1.wy);
+    bottom = Math.max(bottom, p2.wy);
+  });
+
+  const mapW = right - left + PAD * 2;
+  const mapH = bottom - top + PAD * 2;
+
+  const sw = window.innerWidth;
+  const sh = window.innerHeight;
+  const scale = Math.min(1, sw / mapW, sh / mapH);
+
+  view.scale = scale;
+  view.x = (sw - mapW * scale) / 2 - left * scale + PAD * scale;
+  view.y = (sh - mapH * scale) / 2 - top  * scale + PAD * scale;
   applyView();
 }
 
