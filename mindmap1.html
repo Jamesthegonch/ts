@@ -1040,33 +1040,35 @@ function openPopup(n) {
 function fitToScreen(){
   if(!nodes.length) return;
 
-  const PAD = 40;
+  requestAnimationFrame(()=>{
+    const PAD = 40;
 
-  const els = document.querySelectorAll('#mindmap .node');
-  if(!els.length) return;
+    const els = document.querySelectorAll('#mindmap .node');
+    if(!els.length) return;
 
-  let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
-  els.forEach(el => {
-    const r = el.getBoundingClientRect();
-    const p1 = worldFromScreen(r.left,  r.top);
-    const p2 = worldFromScreen(r.right, r.bottom);
-    left   = Math.min(left,   p1.wx);
-    right  = Math.max(right,  p2.wx);
-    top    = Math.min(top,    p1.wy);
-    bottom = Math.max(bottom, p2.wy);
+    let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+    els.forEach(el => {
+      const r = el.getBoundingClientRect();
+      const p1 = worldFromScreen(r.left,  r.top);
+      const p2 = worldFromScreen(r.right, r.bottom);
+      left   = Math.min(left,   p1.wx);
+      right  = Math.max(right,  p2.wx);
+      top    = Math.min(top,    p1.wy);
+      bottom = Math.max(bottom, p2.wy);
+    });
+
+    const mapW = right - left + PAD * 2;
+    const mapH = bottom - top + PAD * 2;
+
+    const sw = window.innerWidth;
+    const sh = window.innerHeight;
+    const scale = Math.min(1, sw / mapW, sh / mapH);
+
+    view.scale = scale;
+    view.x = (sw - mapW * scale) / 2 - left * scale + PAD * scale;
+    view.y = (sh - mapH * scale) / 2 - top  * scale + PAD * scale;
+    applyView();
   });
-
-  const mapW = right - left + PAD * 2;
-  const mapH = bottom - top + PAD * 2;
-
-  const sw = window.innerWidth;
-  const sh = window.innerHeight;
-  const scale = Math.min(1, sw / mapW, sh / mapH);
-
-  view.scale = scale;
-  view.x = (sw - mapW * scale) / 2 - left * scale + PAD * scale;
-  view.y = (sh - mapH * scale) / 2 - top  * scale + PAD * scale;
-  applyView();
 }
 
 // THEME & PANEL
