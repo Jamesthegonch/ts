@@ -344,7 +344,8 @@ const ICONS = {
 };
 
 // GLOBALS
-const viewport = document.getElementById('viewport'),
+const viewport        = document.getElementById('viewport'),
+      viewportContainer = document.getElementById('viewportContainer'),
       svg      = document.getElementById('links'),
       mapRoot  = document.getElementById('mindmap'),
       sidePanel= document.getElementById('sidepanel'),
@@ -655,22 +656,23 @@ function applyView(){
 
 // PAN / ZOOM / DRAG
 let pan=false, startP={}, startV={};
-viewport.addEventListener('pointerdown',e=>{
-  if(e.target!==viewport) return;
+viewportContainer.addEventListener('pointerdown',e=>{
+  if(e.target!==viewport && e.target!==viewportContainer) return;
   closeMenus();
   pan=true;
-  viewport.setPointerCapture(e.pointerId);
+  viewportContainer.setPointerCapture(e.pointerId);
   startP={x:e.clientX,y:e.clientY};
   startV={...view};
 });
-viewport.addEventListener('pointermove',e=>{
+viewportContainer.addEventListener('pointermove',e=>{
   if(!pan) return;
   view.x = startV.x + (e.clientX - startP.x);
   view.y = startV.y + (e.clientY - startP.y);
   scheduleRender();
 });
-viewport.addEventListener('pointerup',()=>{ pan=false; });
-viewport.addEventListener('wheel',e=>{
+viewportContainer.addEventListener('pointerup',()=>{ pan=false; });
+viewportContainer.addEventListener('wheel',e=>{
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup')) return;
   e.preventDefault();
   const f = e.deltaY>0 ? .97 : 1.03,
         ns = Math.min(3,Math.max(.35,view.scale*f));
