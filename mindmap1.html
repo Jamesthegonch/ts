@@ -716,6 +716,12 @@ function enableNodeEvents(el,n){
     document.addEventListener('pointermove',mv);
     document.addEventListener('pointerup',up);
   });
+  /* fallback so taps trigger even if pointerup is swallowed */
+  el.addEventListener('click',e=>{
+    if(dragging) return;
+    e.stopPropagation();
+    openPopup(n);
+  });
   el.addEventListener('contextmenu',e=>{
     e.preventDefault();
     closeMenus();
