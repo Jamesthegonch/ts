@@ -1146,7 +1146,7 @@ refresh();
 /* ---- Mind‑Map Extra Features ---- */
 (function(){
   /* ---------- Helpers ---------- */
-  function renderVisualisations(container){
+  window.renderVisualisations = function(container){
     container.querySelectorAll('visualisation').forEach(el=>{
       const code=el.textContent;
       const block=document.createElement('div');
@@ -1159,7 +1159,7 @@ refresh();
       el.after(block);
     });
   }
-  function removeVisualisations(container){
+  window.removeVisualisations = function(container){
     container.querySelectorAll('.visBlock').forEach(b=>b.remove());
     container.querySelectorAll('visualisation').forEach(el=>{
       el.style.display='';
