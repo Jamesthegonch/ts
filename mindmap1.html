@@ -658,7 +658,7 @@ function applyView(){
 // PAN / ZOOM / DRAG
 let pan=false, startP={}, startV={};
 viewportContainer.addEventListener('pointerdown',e=>{
-  if(e.target.closest('#sidepanel') || e.target.closest('.popup') || e.target.closest('#modeToggle')) return;
+  if(e.target.closest('.node') || e.target.closest('#sidepanel') || e.target.closest('.popup') || e.target.closest('#modeToggle')) return;
   closeMenus();
   pan=true;
   viewportContainer.setPointerCapture(e.pointerId);
