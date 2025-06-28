@@ -984,7 +984,11 @@ function openPopup(n) {
     removeVisualisations(page);
     n.notes = page.innerHTML;  // save WITH the generated HTML
     renderVisualisations(page);
+
+    const keep = { ...view };   // preserve current viewport
     build();
+    view = keep;
+    applyView();
   };
 
   p.querySelector(".iconBtn").onclick = () => { saveAndClose(); ov.remove(); };
@@ -1153,7 +1157,7 @@ refresh();
       block.className='visBlock';
       const frame=document.createElement('iframe');
       frame.setAttribute('sandbox','allow-scripts');
-      frame.srcdoc=code;
+      frame.srcdoc='<!DOCTYPE html><html><body>'+code+'</body></html>';
       block.appendChild(frame);
       el.style.display='none';
       el.after(block);
