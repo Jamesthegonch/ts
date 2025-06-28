@@ -806,45 +806,7 @@ const execFontSize=delta=>{
 };
 const clearHighlight=_=>{ restoreSelection(); document.execCommand && document.execCommand('removeFormat',false,null); };
 
-// ── AI VIDEO DECISION ────────────────────────────────────────────
-function decidesIfVideoNeeded(node) {
-  const label = node.label.toLowerCase();
-  const notes = (node.notes || '').toLowerCase();
-  const content = label + ' ' + notes;
-  
-  // Video-worthy content indicators
-  const videoKeywords = [
-    'algorithm', 'process', 'procedure', 'method', 'technique',
-    'implementation', 'example', 'demonstration', 'tutorial',
-    'step', 'workflow', 'calculation', 'formula', 'equation',
-    'gradient descent', 'regression', 'classification', 'neural',
-    'matrix', 'vector', 'interpolation', 'integration', 'differentiation'
-  ];
-  
-  // Content that usually doesn't need videos
-  const noVideoKeywords = [
-    'definition', 'theory', 'concept', 'overview', 'introduction',
-    'summary', 'conclusion', 'reference', 'bibliography'
-  ];
-  
-  // Check for video-worthy content
-  const hasVideoKeywords = videoKeywords.some(keyword => content.includes(keyword));
-  const hasNoVideoKeywords = noVideoKeywords.some(keyword => content.includes(keyword));
-  
-  // Additional heuristics
-  const isLeafNode = !nodes.some(n => n.parent === node.id); // No children
-  const hasDetailedNotes = notes.length > 100; // Substantial content
-  const isMathematical = /[=+\-*\/\^()∫∂∑]/.test(content); // Contains math symbols
-  const isProcessBased = content.includes('step') || content.includes('phase') || content.includes('method');
-  
-  // Decision logic
-  if (hasNoVideoKeywords && !isMathematical) return false;
-  if (hasVideoKeywords || isMathematical || isProcessBased) return true;
-  if (isLeafNode && hasDetailedNotes) return true;
-  
-  // Default: no video for simple concept nodes
-  return false;
-}
+
 
 // ── POP-UP WINDOW ────────────────────────────────────────────────
 function openPopup(n) {
@@ -1109,60 +1071,6 @@ refresh();
 </script>
 <!-- ---------- Mind‑Map Extra Features (append before </body>) ---------- -->
 <style>
-  /* Video placeholder block - horizontal layout */
-  .videoBlock{
-    width:100%;
-    max-width:500px;
-    margin:0.5rem auto;
-    border:2px solid var(--node-border);
-    border-radius:8px;
-    background:#f0f0f0;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:8px;
-  }
-  .videoBlock .screen{
-    flex-shrink:0;
-    width:120px;
-    height:68px;
-    background:#bbb;
-    position:relative;
-    border-radius:6px;
-    overflow:hidden;
-  }
-  .videoBlock .screen::after{
-    content:'▶';
-    font-size:1.2rem;
-    color:#fff;
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .videoBlock .content{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:0;
-  }
-  .videoBlock .title{
-    width:100%;
-    height:0.7rem;
-    background:#ccc;
-    border-radius:3px;
-  }
-  .videoBlock .desc{
-    width:85%;
-    height:0.5rem;
-    background:#ddd;
-    border-radius:3px;
-  }
-
-  /* Visualization placeholder */
   .visBlock{
     height:220px;
     border:3px dashed var(--node-border);
@@ -1283,18 +1191,7 @@ refresh();
     const toolbar = pop.querySelector('.toolbar');
 
     if(page && toolbar){
-      /* AI-based video insertion - only for suitable content */
-      if(!page.querySelector('.videoBlock')){
-        const shouldHaveVideo = decidesIfVideoNeeded(n);
-        if(shouldHaveVideo){
-          const v = document.createElement('div');
-          v.className = 'videoBlock';
-          v.innerHTML = '<div class="screen"></div><div class="content"><div class="title"></div><div class="desc"></div></div>';
-          page.insertBefore(v, page.firstChild);
-        }
-      }
-
-      /* toolbar already has formatting buttons - no need for video/viz buttons */
+      /* toolbar already has formatting buttons */
 
       /* ---------- floating formatting toolbar on selection ---------- */
       let selToolbar = null;
