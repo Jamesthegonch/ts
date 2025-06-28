@@ -85,55 +85,167 @@
 </style>
 </head>
 <body>
-
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  REVERSE-FAMILY TREE – edge-gap guarantee (v17)          ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+     <script>
+      (function tidyTreeEdgeGap () {
+      
+      /* ── CONFIG KNOBS ─────────────────────────────────────────── */
+      const TOP_PAD    = 60;      // root’s top edge from viewport
+      const ROW_GAP    = 300;     // vertical gap between generations
+      const EDGE_GAP   = 200;      // 🔸 minimum empty space (edge-to-edge)
+      const MAX_FRAC   = 6;    // max allowed width fraction
+      
+      /* ── WAIT FOR HOST MAP ────────────────────────────────────── */
+      (function wait () {
+        try { if (typeof build === 'function' && Array.isArray(nodes)) return patch(); }
+        catch { /* script not loaded yet */ }
+        setTimeout(wait, 0);
+      })();
+      
+      /* ── MAIN PATCH ───────────────────────────────────────────── */
+      function patch () {
+        if (build._edgeGapV17) return;      // already applied
+      
+        /* 1 ▸ root + orphans */
+        const root = nodes.find(n => /^syllabus\b/i.test(n.label)) || nodes[0];
+        nodes.forEach(n => { if (n !== root && n.parent == null) n.parent = root.id; });
+      
+        /* 2 ▸ children lookup */
+        const kids = {};
+        nodes.forEach(n => { if (n.parent != null) (kids[n.parent] ||= []).push(n); });
+      
+        /* 3 ▸ measure real box sizes */
+        function measure () {
+          const probe = document.createElement('div');
+          probe.style.cssText = 'position:absolute;visibility:hidden;';
+          document.body.appendChild(probe);
+          nodes.forEach(n => {
+            probe.className = 'node';
+            probe.innerHTML = `<div>${n.label}</div>`;
+            const r = probe.getBoundingClientRect();
+            n._w = r.width; n._h = r.height;
+          });
+          document.body.removeChild(probe);
+        }
+      
+        /* 4 ▸ compute subtree widths (edge-gap aware) */
+        const subW = new Map();
+        function width(n) {
+          const ch = kids[n.id] || [];
+          if (!ch.length) return subW.set(n, n._w).get(n);
+          const totalKids = ch.reduce((sum,c)=> sum + width(c), 0);
+          const gaps      = EDGE_GAP * (ch.length - 1);
+          return subW.set(n, Math.max(n._w, totalKids + gaps)).get(n);
+        }
+      
+        /* 5 ▸ place nodes (strict L→R) */
+        function place(n, leftEdge, depth) {
+          n.y = TOP_PAD + depth * ROW_GAP;
+          n.x = leftEdge + subW.get(n) / 2;
+      
+          const ch = kids[n.id] || [];
+          if (!ch.length) return;
+      
+          let cursor = leftEdge;
+          ch.forEach(c => {
+            place(c, cursor, depth + 1);
+            cursor += subW.get(c) + EDGE_GAP;
+          });
+        }
+      
+        /* 6 ▸ squeeze if too wide, then centre */
+        function fitAndCenter () {
+          let minX = Math.min(...nodes.map(n => n.x - n._w/2));
+          let maxX = Math.max(...nodes.map(n => n.x + n._w/2));
+          let W    = maxX - minX;
+      
+          if (W > innerWidth * MAX_FRAC) {
+            const f  = (innerWidth * MAX_FRAC) / W;
+            const cx = (minX + maxX) / 2;
+            nodes.forEach(n => n.x = (n.x - cx) * f + cx);
+            minX = Math.min(...nodes.map(n => n.x - n._w/2));
+            maxX = Math.max(...nodes.map(n => n.x + n._w/2));
+            W    = maxX - minX;
+          }
+          const offset = (innerWidth - W)/2 - minX;
+          nodes.forEach(n => n.x += offset);
+        }
+      
+        /* 7 ▸ apply positions to DOM */
+        function pushDOM () {
+          document.querySelectorAll('#mindmap .node')
+            .forEach((el,i)=>{
+              const n = nodes[i];
+              el.style.left = `${n.x}px`;
+              el.style.top  = `${n.y + n._h/2}px`;
+            });
+        }
+      
+        /* 8 ▸ redraw smooth connectors */
+        updateLinks = function () {
+          linkEls.forEach(({l,node})=>{
+            const p = nodes.find(k=>k.id===node.parent);
+            if (!p) { l.setAttribute('d', ''); return; }
+            const pB = p.y + p._h;
+            const cT = node.y;
+            if (cT <= pB){ l.setAttribute('d',''); return; }
+            const midY = (pB + cT)/2;
+            l.removeAttribute('marker-end');
+            l.setAttribute('d',
+              `M ${p.x} ${pB} C ${p.x} ${midY} ${node.x} ${midY} ${node.x} ${cT}`);
+          });
+        };
+      
+        /* 9 ▸ viewport snap */
+        function snap () {
+          view.scale = 1;
+          const minX = Math.min(...nodes.map(n => n.x - n._w/2));
+          const maxX = Math.max(...nodes.map(n => n.x + n._w/2));
+          view.x = innerWidth/2 - (minX+maxX)/2;
+          view.y = 0;
+          applyView();
+        }
+      
+        /* 10 ▸ wrap host build() */
+        const hostBuild = build;
+        build = function () {
+          hostBuild.apply(this, arguments);
+          measure();            // sizes first
+          width(root);          // subtree widths
+          place(root, 0, 0);    // coordinates
+          fitAndCenter();       // squeeze & centre
+          pushDOM();            // move DOM nodes
+          updateLinks();        // bend links
+          snap();               // centre viewport
+        };
+        build._edgeGapV17 = true;
+      
+        /* first render */
+        try { build(); } catch {}
+      }
+      })();
+      </script>
+      
   <div id="sidepanel" class="collapsed">
     <div id="sideToggle">→</div>
     <h3>Mind-Map DSL</h3>
     <textarea id="dslInput" spellcheck="false">
-    Syllabus 🗂️ | size=1.6 | color=#4fc3f7 /* light-blue 💧 */ | notes=<strong>Course overview: Numerical Methods for Differential Equations</strong>
-      Approximation & Interpolation 🎯 | size=1.3 | color=#ffe0b2 /* pastel-peach 🍑 */ | notes=<strong>Finding simple functions that mimic complex ones: interpolation fits exactly through given points (Lagrange, Chebyshev, splines), approximation fits “as close as possible” (least-squares, regression, NURBS). Used for data fitting, graphics, and simulations. Key ideas: avoid overfitting (Runge’s phenomenon), prefer Chebyshev nodes for stability, and use splines for smoothness. Example: interpolation hits all data points, approximation finds best fit for noisy data.</strong>
-        Interpolation 📍 | size=1.0 | color=#ffd54f /* sunflower 🌻 */  
-          Vandermonde Matrix | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Lagrange Formula | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Error Analysis & Runge Phenomenon | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Chebyshev Nodes | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Cubic Splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-        Approximation 🎨 | size=1.0 | color=#ffd54f /* sunflower 🌻 */  
-          Polynomial Regression | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Orthogonal Projection & Least Squares | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          NURBS & B-splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */ | notes=<strong>B-splines</strong> are ==piecewise polynomial== curves with local control and smoothness.<visualisation><svg viewBox="0 0 200 120" width="200" height="120"><polyline points="20,100 60,20 100,100 140,30 180,100" fill="none" stroke="#999" stroke-dasharray="4"/><path d="M20,100 C40,50 80,50 100,100 S160,150 180,100" fill="none" stroke="royalblue" stroke-width="3"/></svg></visualisation>
-      Numerical Integration 📏 | size=1.3 | color=#ffb74d /* amber-orange 🍊 */ | notes=<ul><li>Newton-Cotes</li><li>Gauss</li><li>Adaptive, Romberg</li></ul>
-        Newton-Cotes Closed | size=1.0 | color=#ffe082 /* brass ⭐ */  
-          Trapezoidal & Simpson | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Composite Rules & Error Bounds | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-        Gauss-Legendre Quadrature | size=1.0 | color=#ffe082 /* brass ⭐ */  
-        Recursive & Adaptive Methods 🔄 | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Richardson Extrapolation | size=0.6 | color=#e0f7fa /* mint 🌿 */  
-          Romberg Integration | size=0.6 | color=#e0f7fa /* mint 🌿 */  
-          Adaptive Subdivision | size=0.6 | color=#e0f7fa /* mint 🌿 */  
-      Numerical Differentiation 🔢 | size=1.3 | color=#a5d6a7 /* mint-green 🌱 */ | notes=<ul><li>Finite differences</li><li>Errors & stability</li></ul>
-        Finite Difference Formulas | size=1.0 | color=#c8e6c9 /* pale-green 🌾 */  
-          Forward & Backward (O(h²)) | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
-          Central (O(h²), O(h⁴)) | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
-        Round-off Error Analysis ⚠️ | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
-          Floating-point Arithmetic | size=0.6 | color=#f0f4c3 /* lemon 🍋 */  
-          Optimal Step-size Choice | size=0.6 | color=#f0f4c3 /* lemon 🍋 */  
-      Initial Value Problems 🌐 | size=1.3 | color=#ce93d8 /* lavender 🌸 */ | notes=<ul><li>One-step & multistep methods</li><li>Stability</li></ul>
-        Stability of ODEs | size=1.0 | color=#e1bee7 /* lilac 🌺 */  
-        Taylor & Euler Methods | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
-        Runge-Kutta Family | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
-        Multistep (Adams, Gear) | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
-      Nonlinear Equations 🔎 | size=1.3 | color=#90caf9 /* sky-blue ☁️ */ | notes=<ul><li>Bisection to Newton</li></ul>
-        Bisection & Fixed Point | size=1.0 | color=#bbdefb /* powder-blue 🌬 */  
-        Newton-Raphson & Secant | size=1.0 | color=#bbdefb /* powder-blue 🌬 */  
-        Systems & Nonlinear Optimization | size=0.8 | color=#e3f2fd /* silk 🌨 */  
-      Boundary Value Problems 🏁 | size=1.3 | color=#ffcc80 /* peach 🍑 */ | notes=<ul><li>Finite differences</li><li>Heat, wave, Poisson</li></ul>
-        Poisson via Finite Differences | size=1.0 | color=#ffe0b2 /* pastel-peach 🍑 */  
-        Heat Equation & Stability | size=0.8 | color=#fff3e0 /* cream 🍦 */  
-        Wave Equation & Dispersion | size=0.8 | color=#fff3e0 /* cream 🍦 */  
-      Fun, Frustrations & Tricks 🎉 | size=1.3 | color=#b0bec5 /* slate-gray 🪨 */ | notes=<em>Insights & best practices</em>
-        Numerical Challenges & Tips | size=1.0 | color=#cfd8dc /* mist 🌫 */  
-        Practical Software (MATLAB, Python) | size=0.8 | color=#cfd8dc /* mist 🌫 */  
+Calculus III & Vector Analysis (2022–2025 exams) 🧭 | size=1.8 | color=#29b6f6 /* blue 💧 */ | notes=<strong>Welcome! This map is your complete guide to mastering multivariable calculus & vector analysis as examined in 2022–2025. Every big petal is a top exam topic; smaller ones are crucial basics. Bigger nodes = higher chance on exams; color groups related ideas. Use this map by: 1) Starting at the biggest node you don’t know; 2) Reading its clear explanation; 3) Doing its worked example and all five exercises; 4) Moving outward to smaller petals. Each step is packed with short, beginner-friendly, emoji-rich tips. Even if you’re shaky, just follow the petals: the deepest leaves have the most detailed, stepwise examples, so you’ll be able to solve real past-paper questions by the end.</strong> | question="How do I use this mind map for effective revision?" | steps="1. Start at the centre (biggest node); 2. Read the explanation for the first main petal; 3. Work through the example for that petal; 4. Try all five practice questions for that petal; 5. Repeat with next main petal, moving outward" | solution="For example, if the 'Surface Integrals & Flux Computations' node is biggest, read its notes, follow the step-by-step flux example, then attempt each exercise. Move on only when you can do every step yourself." | notes2=<ul><li>Open the map and find the biggest blue petal (most important for the exam)</li><li>Read the worked example for that petal (real past exam, step-by-step)</li><li>Solve the easiest exercise—write out every step</li><li>Try the hardest exercise for that petal—even if you get stuck</li><li>Tick off the petal when you can explain it to a friend</li></ul>
+
+  Taylor Series & Extremum Classification 📈 | size=1.0 | color=#ff7043 /* orange 🍊 */ | notes=<ul><li>Taylor expansion: up to 2nd order</li><li>Classify critical points via Hessian</li><li>Use remainder for error bounds</li></ul>
+    Classification des extremums locaux | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Hessian test for min/max/saddle</em> | question="How do you classify extrema of f(x, y)?" | steps="Find grad=0; Compute Hessian; Analyze eigenvalues"
+    Développement limité (Taylor) | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Taylor polynomial up to 2nd order</em> | question="How to find Taylor expansion of f(x, y)?" | steps="Compute derivatives; Build T2 formula"
+    Reste et estimation d’erreur | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Bound error using Lagrange or integral form</em> | question="How do you estimate the remainder/error in Taylor?" | steps="Write remainder; Bound with derivatives"
+    Minimum global sur un domaine fermé | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Find global extrema using Hessian and endpoints</em> | question="How to check for global minimum?" | steps="Classify criticals; Check boundary"
+
+  Conservative Fields & Exact Differentials 🧲 | size=0.7 | color=#66bb6a /* green 🌿 */ | notes=<ul><li>Test for conservativeness: curl F = 0</li><li>Find potential function</li></ul>
+    Champ gradient | size=0.4 | color=#66bb6a /* green 🌿 */ | notes=<em>Find scalar potential</em> | question="How do you find a potential function for F?" | steps="Integrate component-wise; Match cross-derivatives"
+    Test d’exactitude | size=0.4 | color=#66bb6a /* green 🌿 */ | notes=<em>Use equality of mixed partials</em> | question="How to check if a differential form is exact?" | steps="Compare ∂M/∂y and ∂N/∂x"
+    Chemin indépendant | size=0.4 | color=#66bb6a /* green 🌿 */ | notes=<em>If conservative, integral is path-independent</em> | question="When is a line integral independent of path?" | steps="Show field is conservative"
+
+
     
     </textarea>
 <!-- ╔════════════════════════════════════════════════════╗
@@ -516,7 +628,7 @@ function applyView(){
 // PAN / ZOOM / DRAG
 let pan=false, startP={}, startV={};
 viewportContainer.addEventListener('pointerdown',e=>{
-  if(e.target.closest('.node') || e.target.closest('#sidepanel') || e.target.closest('.popup') || e.target.closest('#modeToggle')) return;
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup') || e.target.closest('#modeToggle')) return;
   closeMenus();
   pan=true;
   viewportContainer.setPointerCapture(e.pointerId);
@@ -573,12 +685,6 @@ function enableNodeEvents(el,n){
     };
     document.addEventListener('pointermove',mv);
     document.addEventListener('pointerup',up);
-  });
-  /* fallback so taps trigger even if pointerup is swallowed */
-  el.addEventListener('click',e=>{
-    if(dragging) return;
-    e.stopPropagation();
-    openPopup(n);
   });
   el.addEventListener('contextmenu',e=>{
     e.preventDefault();
@@ -848,7 +954,11 @@ function openPopup(n) {
     removeVisualisations(page);
     n.notes = page.innerHTML;  // save WITH the generated HTML
     renderVisualisations(page);
+
+    const keep = { ...view };   // preserve current viewport
     build();
+    view = keep;
+    applyView();
   };
 
   p.querySelector(".iconBtn").onclick = () => { saveAndClose(); ov.remove(); };
@@ -1012,12 +1122,12 @@ refresh();
   /* ---------- Helpers ---------- */
   window.renderVisualisations = function(container){
     container.querySelectorAll('visualisation').forEach(el=>{
-      const code=el.innerHTML;
+      const code=el.textContent;
       const block=document.createElement('div');
       block.className='visBlock';
       const frame=document.createElement('iframe');
       frame.setAttribute('sandbox','allow-scripts');
-      frame.srcdoc=code;
+      frame.srcdoc='<!DOCTYPE html><html><body>'+code+'</body></html>';
       block.appendChild(frame);
       el.style.display='none';
       el.after(block);
