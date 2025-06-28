@@ -85,149 +85,7 @@
 </style>
 </head>
 <body>
-<!-- ╔══════════════════════════════════════════════════════════╗
-     ║  REVERSE-FAMILY TREE – edge-gap guarantee (v17)          ║
-     ╚══════════════════════════════════════════════════════════╝ -->
-     <script>
-      (function tidyTreeEdgeGap () {
-      
-      /* ── CONFIG KNOBS ─────────────────────────────────────────── */
-      const TOP_PAD    = 60;      // root’s top edge from viewport
-      const ROW_GAP    = 300;     // vertical gap between generations
-      const EDGE_GAP   = 200;      // 🔸 minimum empty space (edge-to-edge)
-      const MAX_FRAC   = 5;    // max allowed width fraction
-      
-      /* ── WAIT FOR HOST MAP ────────────────────────────────────── */
-      (function wait () {
-        try { if (typeof build === 'function' && Array.isArray(nodes)) return patch(); }
-        catch { /* script not loaded yet */ }
-        setTimeout(wait, 0);
-      })();
-      
-      /* ── MAIN PATCH ───────────────────────────────────────────── */
-      function patch () {
-        if (build._edgeGapV17) return;      // already applied
-      
-        /* 1 ▸ root + orphans */
-        const root = nodes.find(n => /^syllabus\b/i.test(n.label)) || nodes[0];
-        nodes.forEach(n => { if (n !== root && n.parent == null) n.parent = root.id; });
-      
-        /* 2 ▸ children lookup */
-        const kids = {};
-        nodes.forEach(n => { if (n.parent != null) (kids[n.parent] ||= []).push(n); });
-      
-        /* 3 ▸ measure real box sizes */
-        function measure () {
-          const probe = document.createElement('div');
-          probe.style.cssText = 'position:absolute;visibility:hidden;';
-          document.body.appendChild(probe);
-          nodes.forEach(n => {
-            probe.className = 'node';
-            probe.innerHTML = `<div>${n.label}</div>`;
-            const r = probe.getBoundingClientRect();
-            n._w = r.width; n._h = r.height;
-          });
-          document.body.removeChild(probe);
-        }
-      
-        /* 4 ▸ compute subtree widths (edge-gap aware) */
-        const subW = new Map();
-        function width(n) {
-          const ch = kids[n.id] || [];
-          if (!ch.length) return subW.set(n, n._w).get(n);
-          const totalKids = ch.reduce((sum,c)=> sum + width(c), 0);
-          const gaps      = EDGE_GAP * (ch.length - 1);
-          return subW.set(n, Math.max(n._w, totalKids + gaps)).get(n);
-        }
-      
-        /* 5 ▸ place nodes (strict L→R) */
-        function place(n, leftEdge, depth) {
-          n.y = TOP_PAD + depth * ROW_GAP;
-          n.x = leftEdge + subW.get(n) / 2;
-      
-          const ch = kids[n.id] || [];
-          if (!ch.length) return;
-      
-          let cursor = leftEdge;
-          ch.forEach(c => {
-            place(c, cursor, depth + 1);
-            cursor += subW.get(c) + EDGE_GAP;
-          });
-        }
-      
-        /* 6 ▸ squeeze if too wide, then centre */
-        function fitAndCenter () {
-          let minX = Math.min(...nodes.map(n => n.x - n._w/2));
-          let maxX = Math.max(...nodes.map(n => n.x + n._w/2));
-          let W    = maxX - minX;
-      
-          if (W > innerWidth * MAX_FRAC) {
-            const f  = (innerWidth * MAX_FRAC) / W;
-            const cx = (minX + maxX) / 2;
-            nodes.forEach(n => n.x = (n.x - cx) * f + cx);
-            minX = Math.min(...nodes.map(n => n.x - n._w/2));
-            maxX = Math.max(...nodes.map(n => n.x + n._w/2));
-            W    = maxX - minX;
-          }
-          const offset = (innerWidth - W)/2 - minX;
-          nodes.forEach(n => n.x += offset);
-        }
-      
-        /* 7 ▸ apply positions to DOM */
-        function pushDOM () {
-          document.querySelectorAll('#mindmap .node')
-            .forEach((el,i)=>{
-              const n = nodes[i];
-              el.style.left = `${n.x}px`;
-              el.style.top  = `${n.y + n._h/2}px`;
-            });
-        }
-      
-        /* 8 ▸ redraw smooth connectors */
-        updateLinks = function () {
-          linkEls.forEach(({l,node})=>{
-            const p = nodes.find(k=>k.id===node.parent);
-            if (!p) { l.setAttribute('d', ''); return; }
-            const pB = p.y + p._h;
-            const cT = node.y;
-            if (cT <= pB){ l.setAttribute('d',''); return; }
-            const midY = (pB + cT)/2;
-            l.removeAttribute('marker-end');
-            l.setAttribute('d',
-              `M ${p.x} ${pB} C ${p.x} ${midY} ${node.x} ${midY} ${node.x} ${cT}`);
-          });
-        };
-      
-        /* 9 ▸ viewport snap */
-        function snap () {
-          view.scale = 1;
-          const minX = Math.min(...nodes.map(n => n.x - n._w/2));
-          const maxX = Math.max(...nodes.map(n => n.x + n._w/2));
-          view.x = innerWidth/2 - (minX+maxX)/2;
-          view.y = 0;
-          applyView();
-        }
-      
-        /* 10 ▸ wrap host build() */
-        const hostBuild = build;
-        build = function () {
-          hostBuild.apply(this, arguments);
-          measure();            // sizes first
-          width(root);          // subtree widths
-          place(root, 0, 0);    // coordinates
-          fitAndCenter();       // squeeze & centre
-          pushDOM();            // move DOM nodes
-          updateLinks();        // bend links
-          snap();               // centre viewport
-        };
-        build._edgeGapV17 = true;
-      
-        /* first render */
-        try { build(); } catch {}
-      }
-      })();
-      </script>
-      
+
   <div id="sidepanel" class="collapsed">
     <div id="sideToggle">→</div>
     <h3>Mind-Map DSL</h3>
@@ -1152,7 +1010,7 @@ refresh();
 /* ---- Mind‑Map Extra Features ---- */
 (function(){
   /* ---------- Helpers ---------- */
-  function renderVisualisations(container){
+  window.renderVisualisations = function(container){
     container.querySelectorAll('visualisation').forEach(el=>{
       const code=el.innerHTML;
       const block=document.createElement('div');
@@ -1165,7 +1023,7 @@ refresh();
       el.after(block);
     });
   }
-  function removeVisualisations(container){
+  window.removeVisualisations = function(container){
     container.querySelectorAll('.visBlock').forEach(b=>b.remove());
     container.querySelectorAll('visualisation').forEach(el=>{
       el.style.display='';
