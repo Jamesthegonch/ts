@@ -33,13 +33,14 @@
   #sideToggle { position:absolute;top:8px;right:-28px;width:26px;height:26px;border-radius:50%;background:var(--menu-bg);border:3px solid var(--node-border);display:flex;align-items:center;justify-content:center;cursor:pointer; }
 
   /* MODE TOGGLE */
-  #modeToggle { position:fixed;top:1rem;right:1rem;z-index:95;border:2px solid var(--text);border-radius:12px;padding:.35rem .6rem;display:flex;align-items:center;background:var(--bg); }
+  #modeToggle { position:fixed;top:1rem;right:1rem;z-index:95;border:2px solid var(--text);border-radius:12px;padding:.35rem .6rem;display:flex;align-items:center;background:var(--bg);cursor:pointer; }
   #modeToggle svg { width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.3; }
 
   /* CANVAS */
-  #viewportContainer { position:absolute;inset:0; }
-  #viewport { position:absolute;inset:0;touch-action:none;cursor:grab; }
-  #viewport:active { cursor:grabbing; }
+#viewportContainer { position:absolute;inset:0;touch-action:none;cursor:grab; }
+#viewportContainer:active { cursor:grabbing; }
+#viewport { position:absolute;inset:0;touch-action:none;cursor:inherit; }
+#viewport:active { cursor:inherit; }
   svg#links { position:absolute;inset:0;overflow:visible;pointer-events:none; }
   #mindmap { position:absolute;inset:0;pointer-events:none; }
 
@@ -242,7 +243,7 @@
         Approximation 🎨 | size=1.0 | color=#ffd54f /* sunflower 🌻 */  
           Polynomial Regression | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
           Orthogonal Projection & Least Squares | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          NURBS & B-splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
+          NURBS & B-splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */ | notes=<strong>B-splines</strong> are ==piecewise polynomial== curves with local control and smoothness.<visualisation><svg viewBox="0 0 200 120" width="200" height="120"><polyline points="20,100 60,20 100,100 140,30 180,100" fill="none" stroke="#999" stroke-dasharray="4"/><path d="M20,100 C40,50 80,50 100,100 S160,150 180,100" fill="none" stroke="royalblue" stroke-width="3"/></svg></visualisation>
       Numerical Integration 📏 | size=1.3 | color=#ffb74d /* amber-orange 🍊 */ | notes=<ul><li>Newton-Cotes</li><li>Gauss</li><li>Adaptive, Romberg</li></ul>
         Newton-Cotes Closed | size=1.0 | color=#ffe082 /* brass ⭐ */  
           Trapezoidal & Simpson | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
@@ -344,7 +345,8 @@ const ICONS = {
 };
 
 // GLOBALS
-const viewport = document.getElementById('viewport'),
+const viewport        = document.getElementById('viewport'),
+      viewportContainer = document.getElementById('viewportContainer'),
       svg      = document.getElementById('links'),
       mapRoot  = document.getElementById('mindmap'),
       sidePanel= document.getElementById('sidepanel'),
@@ -655,22 +657,23 @@ function applyView(){
 
 // PAN / ZOOM / DRAG
 let pan=false, startP={}, startV={};
-viewport.addEventListener('pointerdown',e=>{
-  if(e.target!==viewport) return;
+viewportContainer.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup') || e.target.closest('#modeToggle')) return;
   closeMenus();
   pan=true;
-  viewport.setPointerCapture(e.pointerId);
+  viewportContainer.setPointerCapture(e.pointerId);
   startP={x:e.clientX,y:e.clientY};
   startV={...view};
 });
-viewport.addEventListener('pointermove',e=>{
+viewportContainer.addEventListener('pointermove',e=>{
   if(!pan) return;
   view.x = startV.x + (e.clientX - startP.x);
   view.y = startV.y + (e.clientY - startP.y);
   scheduleRender();
 });
-viewport.addEventListener('pointerup',()=>{ pan=false; });
-viewport.addEventListener('wheel',e=>{
+viewportContainer.addEventListener('pointerup',()=>{ pan=false; });
+viewportContainer.addEventListener('wheel',e=>{
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup')) return;
   e.preventDefault();
   const f = e.deltaY>0 ? .97 : 1.03,
         ns = Math.min(3,Math.max(.35,view.scale*f));
@@ -803,45 +806,7 @@ const execFontSize=delta=>{
 };
 const clearHighlight=_=>{ restoreSelection(); document.execCommand && document.execCommand('removeFormat',false,null); };
 
-// ── AI VIDEO DECISION ────────────────────────────────────────────
-function decidesIfVideoNeeded(node) {
-  const label = node.label.toLowerCase();
-  const notes = (node.notes || '').toLowerCase();
-  const content = label + ' ' + notes;
-  
-  // Video-worthy content indicators
-  const videoKeywords = [
-    'algorithm', 'process', 'procedure', 'method', 'technique',
-    'implementation', 'example', 'demonstration', 'tutorial',
-    'step', 'workflow', 'calculation', 'formula', 'equation',
-    'gradient descent', 'regression', 'classification', 'neural',
-    'matrix', 'vector', 'interpolation', 'integration', 'differentiation'
-  ];
-  
-  // Content that usually doesn't need videos
-  const noVideoKeywords = [
-    'definition', 'theory', 'concept', 'overview', 'introduction',
-    'summary', 'conclusion', 'reference', 'bibliography'
-  ];
-  
-  // Check for video-worthy content
-  const hasVideoKeywords = videoKeywords.some(keyword => content.includes(keyword));
-  const hasNoVideoKeywords = noVideoKeywords.some(keyword => content.includes(keyword));
-  
-  // Additional heuristics
-  const isLeafNode = !nodes.some(n => n.parent === node.id); // No children
-  const hasDetailedNotes = notes.length > 100; // Substantial content
-  const isMathematical = /[=+\-*\/\^()∫∂∑]/.test(content); // Contains math symbols
-  const isProcessBased = content.includes('step') || content.includes('phase') || content.includes('method');
-  
-  // Decision logic
-  if (hasNoVideoKeywords && !isMathematical) return false;
-  if (hasVideoKeywords || isMathematical || isProcessBased) return true;
-  if (isLeafNode && hasDetailedNotes) return true;
-  
-  // Default: no video for simple concept nodes
-  return false;
-}
+
 
 // ── POP-UP WINDOW ────────────────────────────────────────────────
 function openPopup(n) {
@@ -905,6 +870,7 @@ function openPopup(n) {
 
   // 🡢 render stored notes through md() so the DSL markup shows up
   page.innerHTML = md(n.notes || "");
+  renderVisualisations(page);
 
   // optional per-node colours (added in earlier step)
   if (n.noteBg)    page.style.backgroundColor = n.noteBg;
@@ -1015,8 +981,14 @@ function openPopup(n) {
   const titleEl = p.querySelector("h2");
   const saveAndClose = () => {
     titleEl.innerText.trim() && (n.label = titleEl.innerText.trim());
+    removeVisualisations(page);
     n.notes = page.innerHTML;  // save WITH the generated HTML
+    renderVisualisations(page);
+
+    const keep = { ...view };   // preserve current viewport
     build();
+    view = keep;
+    applyView();
   };
 
   p.querySelector(".iconBtn").onclick = () => { saveAndClose(); ov.remove(); };
@@ -1106,71 +1078,16 @@ refresh();
 </script>
 <!-- ---------- Mind‑Map Extra Features (append before </body>) ---------- -->
 <style>
-  /* Video placeholder block - horizontal layout */
-  .videoBlock{
-    width:100%;
-    max-width:500px;
-    margin:0.5rem auto;
-    border:2px solid var(--node-border);
-    border-radius:8px;
-    background:#f0f0f0;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:8px;
-  }
-  .videoBlock .screen{
-    flex-shrink:0;
-    width:120px;
-    height:68px;
-    background:#bbb;
-    position:relative;
-    border-radius:6px;
-    overflow:hidden;
-  }
-  .videoBlock .screen::after{
-    content:'▶';
-    font-size:1.2rem;
-    color:#fff;
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .videoBlock .content{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:0;
-  }
-  .videoBlock .title{
-    width:100%;
-    height:0.7rem;
-    background:#ccc;
-    border-radius:3px;
-  }
-  .videoBlock .desc{
-    width:85%;
-    height:0.5rem;
-    background:#ddd;
-    border-radius:3px;
-  }
-
-  /* Visualization placeholder */
   .visBlock{
-    height:220px;
+    margin:1rem 0;
     border:3px dashed var(--node-border);
     border-radius:24px;
-    background:rgba(0,0,0,.05);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#777;
-    font-style:italic;
-    margin:1rem 0;
+    overflow:hidden;
+  }
+  .visBlock iframe{
+    width:100%;
+    height:220px;
+    border:0;
   }
 
   /* Microphone button in popup header */
@@ -1233,6 +1150,25 @@ refresh();
 /* ---- Mind‑Map Extra Features ---- */
 (function(){
   /* ---------- Helpers ---------- */
+  window.renderVisualisations = function(container){
+    container.querySelectorAll('visualisation').forEach(el=>{
+      const code=el.textContent;
+      const block=document.createElement('div');
+      block.className='visBlock';
+      const frame=document.createElement('iframe');
+      frame.setAttribute('sandbox','allow-scripts');
+      frame.srcdoc='<!DOCTYPE html><html><body>'+code+'</body></html>';
+      block.appendChild(frame);
+      el.style.display='none';
+      el.after(block);
+    });
+  }
+  window.removeVisualisations = function(container){
+    container.querySelectorAll('.visBlock').forEach(b=>b.remove());
+    container.querySelectorAll('visualisation').forEach(el=>{
+      el.style.display='';
+    });
+  }
   function insertNodeAtCaret(container, node){
     const sel = window.getSelection();
     if(sel && sel.rangeCount){
@@ -1280,18 +1216,7 @@ refresh();
     const toolbar = pop.querySelector('.toolbar');
 
     if(page && toolbar){
-      /* AI-based video insertion - only for suitable content */
-      if(!page.querySelector('.videoBlock')){
-        const shouldHaveVideo = decidesIfVideoNeeded(n);
-        if(shouldHaveVideo){
-          const v = document.createElement('div');
-          v.className = 'videoBlock';
-          v.innerHTML = '<div class="screen"></div><div class="content"><div class="title"></div><div class="desc"></div></div>';
-          page.insertBefore(v, page.firstChild);
-        }
-      }
-
-      /* toolbar already has formatting buttons - no need for video/viz buttons */
+      /* toolbar already has formatting buttons */
 
       /* ---------- floating formatting toolbar on selection ---------- */
       let selToolbar = null;
