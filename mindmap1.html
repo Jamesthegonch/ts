@@ -33,13 +33,14 @@
   #sideToggle { position:absolute;top:8px;right:-28px;width:26px;height:26px;border-radius:50%;background:var(--menu-bg);border:3px solid var(--node-border);display:flex;align-items:center;justify-content:center;cursor:pointer; }
 
   /* MODE TOGGLE */
-  #modeToggle { position:fixed;top:1rem;right:1rem;z-index:95;border:2px solid var(--text);border-radius:12px;padding:.35rem .6rem;display:flex;align-items:center;background:var(--bg); }
+  #modeToggle { position:fixed;top:1rem;right:1rem;z-index:95;border:2px solid var(--text);border-radius:12px;padding:.35rem .6rem;display:flex;align-items:center;background:var(--bg);cursor:pointer; }
   #modeToggle svg { width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.3; }
 
   /* CANVAS */
-  #viewportContainer { position:absolute;inset:0; }
-  #viewport { position:absolute;inset:0;touch-action:none;cursor:grab; }
-  #viewport:active { cursor:grabbing; }
+#viewportContainer { position:absolute;inset:0;touch-action:none;cursor:grab; }
+#viewportContainer:active { cursor:grabbing; }
+#viewport { position:absolute;inset:0;touch-action:none;cursor:inherit; }
+#viewport:active { cursor:inherit; }
   svg#links { position:absolute;inset:0;overflow:visible;pointer-events:none; }
   #mindmap { position:absolute;inset:0;pointer-events:none; }
 
@@ -94,7 +95,7 @@
       const TOP_PAD    = 60;      // root’s top edge from viewport
       const ROW_GAP    = 300;     // vertical gap between generations
       const EDGE_GAP   = 200;      // 🔸 minimum empty space (edge-to-edge)
-      const MAX_FRAC   = 5;    // max allowed width fraction
+      const MAX_FRAC   = 6;    // max allowed width fraction
       
       /* ── WAIT FOR HOST MAP ────────────────────────────────────── */
       (function wait () {
@@ -231,50 +232,20 @@
     <div id="sideToggle">→</div>
     <h3>Mind-Map DSL</h3>
     <textarea id="dslInput" spellcheck="false">
-    Syllabus 🗂️ | size=1.6 | color=#4fc3f7 /* light-blue 💧 */ | notes=<strong>Course overview: Numerical Methods for Differential Equations</strong>
-      Approximation & Interpolation 🎯 | size=1.3 | color=#ffe0b2 /* pastel-peach 🍑 */ | notes=<strong>Finding simple functions that mimic complex ones: interpolation fits exactly through given points (Lagrange, Chebyshev, splines), approximation fits “as close as possible” (least-squares, regression, NURBS). Used for data fitting, graphics, and simulations. Key ideas: avoid overfitting (Runge’s phenomenon), prefer Chebyshev nodes for stability, and use splines for smoothness. Example: interpolation hits all data points, approximation finds best fit for noisy data.</strong>
-        Interpolation 📍 | size=1.0 | color=#ffd54f /* sunflower 🌻 */  
-          Vandermonde Matrix | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Lagrange Formula | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Error Analysis & Runge Phenomenon | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Chebyshev Nodes | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Cubic Splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-        Approximation 🎨 | size=1.0 | color=#ffd54f /* sunflower 🌻 */  
-          Polynomial Regression | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Orthogonal Projection & Least Squares | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          NURBS & B-splines | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-      Numerical Integration 📏 | size=1.3 | color=#ffb74d /* amber-orange 🍊 */ | notes=<ul><li>Newton-Cotes</li><li>Gauss</li><li>Adaptive, Romberg</li></ul>
-        Newton-Cotes Closed | size=1.0 | color=#ffe082 /* brass ⭐ */  
-          Trapezoidal & Simpson | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Composite Rules & Error Bounds | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-        Gauss-Legendre Quadrature | size=1.0 | color=#ffe082 /* brass ⭐ */  
-        Recursive & Adaptive Methods 🔄 | size=0.8 | color=#ffecb3 /* ivory 🌼 */  
-          Richardson Extrapolation | size=0.6 | color=#e0f7fa /* mint 🌿 */  
-          Romberg Integration | size=0.6 | color=#e0f7fa /* mint 🌿 */  
-          Adaptive Subdivision | size=0.6 | color=#e0f7fa /* mint 🌿 */  
-      Numerical Differentiation 🔢 | size=1.3 | color=#a5d6a7 /* mint-green 🌱 */ | notes=<ul><li>Finite differences</li><li>Errors & stability</li></ul>
-        Finite Difference Formulas | size=1.0 | color=#c8e6c9 /* pale-green 🌾 */  
-          Forward & Backward (O(h²)) | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
-          Central (O(h²), O(h⁴)) | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
-        Round-off Error Analysis ⚠️ | size=0.8 | color=#e8f5e9 /* lily 🌸 */  
-          Floating-point Arithmetic | size=0.6 | color=#f0f4c3 /* lemon 🍋 */  
-          Optimal Step-size Choice | size=0.6 | color=#f0f4c3 /* lemon 🍋 */  
-      Initial Value Problems 🌐 | size=1.3 | color=#ce93d8 /* lavender 🌸 */ | notes=<ul><li>One-step & multistep methods</li><li>Stability</li></ul>
-        Stability of ODEs | size=1.0 | color=#e1bee7 /* lilac 🌺 */  
-        Taylor & Euler Methods | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
-        Runge-Kutta Family | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
-        Multistep (Adams, Gear) | size=0.8 | color=#f3e5f5 /* orchid 🌷 */  
-      Nonlinear Equations 🔎 | size=1.3 | color=#90caf9 /* sky-blue ☁️ */ | notes=<ul><li>Bisection to Newton</li></ul>
-        Bisection & Fixed Point | size=1.0 | color=#bbdefb /* powder-blue 🌬 */  
-        Newton-Raphson & Secant | size=1.0 | color=#bbdefb /* powder-blue 🌬 */  
-        Systems & Nonlinear Optimization | size=0.8 | color=#e3f2fd /* silk 🌨 */  
-      Boundary Value Problems 🏁 | size=1.3 | color=#ffcc80 /* peach 🍑 */ | notes=<ul><li>Finite differences</li><li>Heat, wave, Poisson</li></ul>
-        Poisson via Finite Differences | size=1.0 | color=#ffe0b2 /* pastel-peach 🍑 */  
-        Heat Equation & Stability | size=0.8 | color=#fff3e0 /* cream 🍦 */  
-        Wave Equation & Dispersion | size=0.8 | color=#fff3e0 /* cream 🍦 */  
-      Fun, Frustrations & Tricks 🎉 | size=1.3 | color=#b0bec5 /* slate-gray 🪨 */ | notes=<em>Insights & best practices</em>
-        Numerical Challenges & Tips | size=1.0 | color=#cfd8dc /* mist 🌫 */  
-        Practical Software (MATLAB, Python) | size=0.8 | color=#cfd8dc /* mist 🌫 */  
+Calculus III & Vector Analysis (2022–2025 exams) 🧭 | size=1.8 | color=#29b6f6 /* blue 💧 */ | notes=<strong>Welcome! This map is your complete guide to mastering multivariable calculus & vector analysis as examined in 2022–2025. Every big petal is a top exam topic; smaller ones are crucial basics. Bigger nodes = higher chance on exams; color groups related ideas. Use this map by: 1) Starting at the biggest node you don’t know; 2) Reading its clear explanation; 3) Doing its worked example and all five exercises; 4) Moving outward to smaller petals. Each step is packed with short, beginner-friendly, emoji-rich tips. Even if you’re shaky, just follow the petals: the deepest leaves have the most detailed, stepwise examples, so you’ll be able to solve real past-paper questions by the end.</strong> | question="How do I use this mind map for effective revision?" | steps="1. Start at the centre (biggest node); 2. Read the explanation for the first main petal; 3. Work through the example for that petal; 4. Try all five practice questions for that petal; 5. Repeat with next main petal, moving outward" | solution="For example, if the 'Surface Integrals & Flux Computations' node is biggest, read its notes, follow the step-by-step flux example, then attempt each exercise. Move on only when you can do every step yourself." | notes2=<ul><li>Open the map and find the biggest blue petal (most important for the exam)</li><li>Read the worked example for that petal (real past exam, step-by-step)</li><li>Solve the easiest exercise—write out every step</li><li>Try the hardest exercise for that petal—even if you get stuck</li><li>Tick off the petal when you can explain it to a friend</li></ul>
+
+  Taylor Series & Extremum Classification 📈 | size=1.0 | color=#ff7043 /* orange 🍊 */ | notes=<ul><li>Taylor expansion: up to 2nd order</li><li>Classify critical points via Hessian</li><li>Use remainder for error bounds</li></ul>
+    Classification des extremums locaux | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Hessian test for min/max/saddle</em> | question="How do you classify extrema of f(x, y)?" | steps="Find grad=0; Compute Hessian; Analyze eigenvalues"
+    Développement limité (Taylor) | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Taylor polynomial up to 2nd order</em> | question="How to find Taylor expansion of f(x, y)?" | steps="Compute derivatives; Build T2 formula"
+    Reste et estimation d’erreur | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Bound error using Lagrange or integral form</em> | question="How do you estimate the remainder/error in Taylor?" | steps="Write remainder; Bound with derivatives"
+    Minimum global sur un domaine fermé | size=0.6 | color=#ff7043 /* orange 🍊 */ | notes=<em>Find global extrema using Hessian and endpoints</em> | question="How to check for global minimum?" | steps="Classify criticals; Check boundary"
+
+  Conservative Fields & Exact Differentials 🧲 | size=0.7 | color=#66bb6a /* green 🌿 */ | notes=<ul><li>Test for conservativeness: curl F = 0</li><li>Find potential function</li></ul>
+    Champ gradient | size=0.4 | color=#66bb6a /* green 🌿 */ | notes=<em>Find scalar potential</em> | question="How do you find a potential function for F?" | steps="Integrate component-wise; Match cross-derivatives"
+    Test d’exactitude | size=0.4 | color=#66bb6a /* green 🌿 */ | notes=<em>Use equality of mixed partials</em> | question="How to check if a differential form is exact?" | steps="Compare ∂M/∂y and ∂N/∂x"
+    Chemin indépendant | size=0.4 | color=#66bb6a /* green 🌿 */ | notes=<em>If conservative, integral is path-independent</em> | question="When is a line integral independent of path?" | steps="Show field is conservative"
+
+
     
     </textarea>
 <!-- ╔════════════════════════════════════════════════════╗
@@ -344,7 +315,8 @@ const ICONS = {
 };
 
 // GLOBALS
-const viewport = document.getElementById('viewport'),
+const viewport        = document.getElementById('viewport'),
+      viewportContainer = document.getElementById('viewportContainer'),
       svg      = document.getElementById('links'),
       mapRoot  = document.getElementById('mindmap'),
       sidePanel= document.getElementById('sidepanel'),
@@ -655,22 +627,23 @@ function applyView(){
 
 // PAN / ZOOM / DRAG
 let pan=false, startP={}, startV={};
-viewport.addEventListener('pointerdown',e=>{
-  if(e.target!==viewport) return;
+viewportContainer.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup') || e.target.closest('#modeToggle')) return;
   closeMenus();
   pan=true;
-  viewport.setPointerCapture(e.pointerId);
+  viewportContainer.setPointerCapture(e.pointerId);
   startP={x:e.clientX,y:e.clientY};
   startV={...view};
 });
-viewport.addEventListener('pointermove',e=>{
+viewportContainer.addEventListener('pointermove',e=>{
   if(!pan) return;
   view.x = startV.x + (e.clientX - startP.x);
   view.y = startV.y + (e.clientY - startP.y);
   scheduleRender();
 });
-viewport.addEventListener('pointerup',()=>{ pan=false; });
-viewport.addEventListener('wheel',e=>{
+viewportContainer.addEventListener('pointerup',()=>{ pan=false; });
+viewportContainer.addEventListener('wheel',e=>{
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup')) return;
   e.preventDefault();
   const f = e.deltaY>0 ? .97 : 1.03,
         ns = Math.min(3,Math.max(.35,view.scale*f));
@@ -803,45 +776,7 @@ const execFontSize=delta=>{
 };
 const clearHighlight=_=>{ restoreSelection(); document.execCommand && document.execCommand('removeFormat',false,null); };
 
-// ── AI VIDEO DECISION ────────────────────────────────────────────
-function decidesIfVideoNeeded(node) {
-  const label = node.label.toLowerCase();
-  const notes = (node.notes || '').toLowerCase();
-  const content = label + ' ' + notes;
-  
-  // Video-worthy content indicators
-  const videoKeywords = [
-    'algorithm', 'process', 'procedure', 'method', 'technique',
-    'implementation', 'example', 'demonstration', 'tutorial',
-    'step', 'workflow', 'calculation', 'formula', 'equation',
-    'gradient descent', 'regression', 'classification', 'neural',
-    'matrix', 'vector', 'interpolation', 'integration', 'differentiation'
-  ];
-  
-  // Content that usually doesn't need videos
-  const noVideoKeywords = [
-    'definition', 'theory', 'concept', 'overview', 'introduction',
-    'summary', 'conclusion', 'reference', 'bibliography'
-  ];
-  
-  // Check for video-worthy content
-  const hasVideoKeywords = videoKeywords.some(keyword => content.includes(keyword));
-  const hasNoVideoKeywords = noVideoKeywords.some(keyword => content.includes(keyword));
-  
-  // Additional heuristics
-  const isLeafNode = !nodes.some(n => n.parent === node.id); // No children
-  const hasDetailedNotes = notes.length > 100; // Substantial content
-  const isMathematical = /[=+\-*\/\^()∫∂∑]/.test(content); // Contains math symbols
-  const isProcessBased = content.includes('step') || content.includes('phase') || content.includes('method');
-  
-  // Decision logic
-  if (hasNoVideoKeywords && !isMathematical) return false;
-  if (hasVideoKeywords || isMathematical || isProcessBased) return true;
-  if (isLeafNode && hasDetailedNotes) return true;
-  
-  // Default: no video for simple concept nodes
-  return false;
-}
+
 
 // ── POP-UP WINDOW ────────────────────────────────────────────────
 function openPopup(n) {
@@ -905,6 +840,7 @@ function openPopup(n) {
 
   // 🡢 render stored notes through md() so the DSL markup shows up
   page.innerHTML = md(n.notes || "");
+  renderVisualisations(page);
 
   // optional per-node colours (added in earlier step)
   if (n.noteBg)    page.style.backgroundColor = n.noteBg;
@@ -1015,8 +951,14 @@ function openPopup(n) {
   const titleEl = p.querySelector("h2");
   const saveAndClose = () => {
     titleEl.innerText.trim() && (n.label = titleEl.innerText.trim());
+    removeVisualisations(page);
     n.notes = page.innerHTML;  // save WITH the generated HTML
+    renderVisualisations(page);
+
+    const keep = { ...view };   // preserve current viewport
     build();
+    view = keep;
+    applyView();
   };
 
   p.querySelector(".iconBtn").onclick = () => { saveAndClose(); ov.remove(); };
@@ -1106,71 +1048,16 @@ refresh();
 </script>
 <!-- ---------- Mind‑Map Extra Features (append before </body>) ---------- -->
 <style>
-  /* Video placeholder block - horizontal layout */
-  .videoBlock{
-    width:100%;
-    max-width:500px;
-    margin:0.5rem auto;
-    border:2px solid var(--node-border);
-    border-radius:8px;
-    background:#f0f0f0;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:8px;
-  }
-  .videoBlock .screen{
-    flex-shrink:0;
-    width:120px;
-    height:68px;
-    background:#bbb;
-    position:relative;
-    border-radius:6px;
-    overflow:hidden;
-  }
-  .videoBlock .screen::after{
-    content:'▶';
-    font-size:1.2rem;
-    color:#fff;
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .videoBlock .content{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:0;
-  }
-  .videoBlock .title{
-    width:100%;
-    height:0.7rem;
-    background:#ccc;
-    border-radius:3px;
-  }
-  .videoBlock .desc{
-    width:85%;
-    height:0.5rem;
-    background:#ddd;
-    border-radius:3px;
-  }
-
-  /* Visualization placeholder */
   .visBlock{
-    height:220px;
+    margin:1rem 0;
     border:3px dashed var(--node-border);
     border-radius:24px;
-    background:rgba(0,0,0,.05);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#777;
-    font-style:italic;
-    margin:1rem 0;
+    overflow:hidden;
+  }
+  .visBlock iframe{
+    width:100%;
+    height:220px;
+    border:0;
   }
 
   /* Microphone button in popup header */
@@ -1233,6 +1120,25 @@ refresh();
 /* ---- Mind‑Map Extra Features ---- */
 (function(){
   /* ---------- Helpers ---------- */
+  window.renderVisualisations = function(container){
+    container.querySelectorAll('visualisation').forEach(el=>{
+      const code=el.textContent;
+      const block=document.createElement('div');
+      block.className='visBlock';
+      const frame=document.createElement('iframe');
+      frame.setAttribute('sandbox','allow-scripts');
+      frame.srcdoc='<!DOCTYPE html><html><body>'+code+'</body></html>';
+      block.appendChild(frame);
+      el.style.display='none';
+      el.after(block);
+    });
+  }
+  window.removeVisualisations = function(container){
+    container.querySelectorAll('.visBlock').forEach(b=>b.remove());
+    container.querySelectorAll('visualisation').forEach(el=>{
+      el.style.display='';
+    });
+  }
   function insertNodeAtCaret(container, node){
     const sel = window.getSelection();
     if(sel && sel.rangeCount){
@@ -1280,18 +1186,7 @@ refresh();
     const toolbar = pop.querySelector('.toolbar');
 
     if(page && toolbar){
-      /* AI-based video insertion - only for suitable content */
-      if(!page.querySelector('.videoBlock')){
-        const shouldHaveVideo = decidesIfVideoNeeded(n);
-        if(shouldHaveVideo){
-          const v = document.createElement('div');
-          v.className = 'videoBlock';
-          v.innerHTML = '<div class="screen"></div><div class="content"><div class="title"></div><div class="desc"></div></div>';
-          page.insertBefore(v, page.firstChild);
-        }
-      }
-
-      /* toolbar already has formatting buttons - no need for video/viz buttons */
+      /* toolbar already has formatting buttons */
 
       /* ---------- floating formatting toolbar on selection ---------- */
       let selToolbar = null;
