@@ -870,6 +870,7 @@ function openPopup(n) {
 
   // 🡢 render stored notes through md() so the DSL markup shows up
   page.innerHTML = md(n.notes || "");
+  renderVisualisations(page);
 
   // optional per-node colours (added in earlier step)
   if (n.noteBg)    page.style.backgroundColor = n.noteBg;
@@ -980,7 +981,9 @@ function openPopup(n) {
   const titleEl = p.querySelector("h2");
   const saveAndClose = () => {
     titleEl.innerText.trim() && (n.label = titleEl.innerText.trim());
+    removeVisualisations(page);
     n.notes = page.innerHTML;  // save WITH the generated HTML
+    renderVisualisations(page);
     build();
   };
 
@@ -1072,16 +1075,15 @@ refresh();
 <!-- ---------- Mind‑Map Extra Features (append before </body>) ---------- -->
 <style>
   .visBlock{
-    height:220px;
+    margin:1rem 0;
     border:3px dashed var(--node-border);
     border-radius:24px;
-    background:rgba(0,0,0,.05);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#777;
-    font-style:italic;
-    margin:1rem 0;
+    overflow:hidden;
+  }
+  .visBlock iframe{
+    width:100%;
+    height:220px;
+    border:0;
   }
 
   /* Microphone button in popup header */
@@ -1144,6 +1146,25 @@ refresh();
 /* ---- Mind‑Map Extra Features ---- */
 (function(){
   /* ---------- Helpers ---------- */
+  function renderVisualisations(container){
+    container.querySelectorAll('visualisation').forEach(el=>{
+      const code=el.textContent;
+      const block=document.createElement('div');
+      block.className='visBlock';
+      const frame=document.createElement('iframe');
+      frame.setAttribute('sandbox','allow-scripts');
+      frame.srcdoc=code;
+      block.appendChild(frame);
+      el.style.display='none';
+      el.after(block);
+    });
+  }
+  function removeVisualisations(container){
+    container.querySelectorAll('.visBlock').forEach(b=>b.remove());
+    container.querySelectorAll('visualisation').forEach(el=>{
+      el.style.display='';
+    });
+  }
   function insertNodeAtCaret(container, node){
     const sel = window.getSelection();
     if(sel && sel.rangeCount){
