@@ -33,7 +33,7 @@
   #sideToggle { position:absolute;top:8px;right:-28px;width:26px;height:26px;border-radius:50%;background:var(--menu-bg);border:3px solid var(--node-border);display:flex;align-items:center;justify-content:center;cursor:pointer; }
 
   /* MODE TOGGLE */
-  #modeToggle { position:fixed;top:1rem;right:1rem;z-index:95;border:2px solid var(--text);border-radius:12px;padding:.35rem .6rem;display:flex;align-items:center;background:var(--bg); }
+  #modeToggle { position:fixed;top:1rem;right:1rem;z-index:95;border:2px solid var(--text);border-radius:12px;padding:.35rem .6rem;display:flex;align-items:center;background:var(--bg);cursor:pointer; }
   #modeToggle svg { width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.3; }
 
   /* CANVAS */
@@ -658,7 +658,7 @@ function applyView(){
 // PAN / ZOOM / DRAG
 let pan=false, startP={}, startV={};
 viewportContainer.addEventListener('pointerdown',e=>{
-  if(e.target.closest('#sidepanel') || e.target.closest('.popup')) return;
+  if(e.target.closest('#sidepanel') || e.target.closest('.popup') || e.target.closest('#modeToggle')) return;
   closeMenus();
   pan=true;
   viewportContainer.setPointerCapture(e.pointerId);
